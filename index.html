@@ -1129,11 +1129,27 @@ Python formulas: use Grist syntax with $ for column references`;
                             columns = match[2];
                         }
                         
-                        // Pattern 2: "Créer la table 'NomTable'" or "Create table 'TableName'"
+                        // Pattern 2: "Créer la table 'Nom Table'" with quotes
                         if (!tableName) {
-                            match = action.match(/(?:table|Table)\s+['"]?(\w+)['"]?/i);
+                            match = action.match(/(?:table|Table)\s+['"]([^'"]+)['"]/i);
                             if (match) {
-                                tableName = match[1].replace(/['"]/g, '');
+                                tableName = match[1];
+                            }
+                        }
+                        
+                        // Pattern 3: "table nommée Nom Table" or "table named Table Name"
+                        if (!tableName) {
+                            match = action.match(/(?:nommée?|named)\s+['"]?([^'"]+?)['"]?(?:\s+avec|\s+with|$)/i);
+                            if (match) {
+                                tableName = match[1].trim();
+                            }
+                        }
+                        
+                        // Pattern 4: Simple "table NomTable" (single word)
+                        if (!tableName) {
+                            match = action.match(/(?:table|Table)\s+(\w+)/i);
+                            if (match) {
+                                tableName = match[1];
                             }
                         }
                         
