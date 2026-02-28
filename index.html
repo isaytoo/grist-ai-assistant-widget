@@ -1667,23 +1667,43 @@ Generate realistic data. DEDUCE missing information intelligently.`;
                 columnNames = existingTable.columns.map(c => c.name);
             } else {
                 // Try to get from pending actions (newly created table)
-                const tableAction = window.pendingActions?.find(a => 
-                    ((a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
-                    a.toLowerCase().includes('table') && 
-                    a.toLowerCase().includes(tableName.toLowerCase()))
+                // Check for new structured format: CREATE_TABLE|TableName|col1:Type,col2:Type
+                const structuredAction = window.pendingActions?.find(a => 
+                    a.startsWith('CREATE_TABLE|') && a.includes(`|${tableName}|`)
                 );
                 
-                if (tableAction) {
-                    const colMatch = tableAction.match(/colonnes?[:\s]+(.+)/i) || tableAction.match(/columns?[:\s]+(.+)/i);
-                    if (colMatch) {
-                        columnNames = colMatch[1].split(',').map(c => {
-                            const name = c.trim().split('(')[0].trim()
-                                .replace(/[^a-zA-Z0-9_\s]/g, '')
-                                .replace(/\s+/g, '_')
+                if (structuredAction) {
+                    const parts = structuredAction.split('|');
+                    if (parts.length >= 3) {
+                        const colsStr = parts.slice(2).join('|');
+                        columnNames = colsStr.split(',').map(c => {
+                            const name = c.split(':')[0].trim()
+                                .replace(/[^a-zA-Z0-9_]/g, '')
                                 .replace(/_+$/g, '')
                                 .replace(/^_+/g, '');
                             return name || 'col';
                         });
+                    }
+                } else {
+                    // Fallback: old format
+                    const tableAction = window.pendingActions?.find(a => 
+                        ((a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
+                        a.toLowerCase().includes('table') && 
+                        a.toLowerCase().includes(tableName.toLowerCase()))
+                    );
+                    
+                    if (tableAction) {
+                        const colMatch = tableAction.match(/colonnes?[:\s]+(.+)/i) || tableAction.match(/columns?[:\s]+(.+)/i);
+                        if (colMatch) {
+                            columnNames = colMatch[1].split(',').map(c => {
+                                const name = c.trim().split('(')[0].trim()
+                                    .replace(/[^a-zA-Z0-9_\s]/g, '')
+                                    .replace(/\s+/g, '_')
+                                    .replace(/_+$/g, '')
+                                    .replace(/^_+/g, '');
+                                return name || 'col';
+                            });
+                        }
                     }
                 }
             }
