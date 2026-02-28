@@ -824,7 +824,18 @@
                             });
                             if (recordsResponse.ok) {
                                 const recordsData = await recordsResponse.json();
-                                rowCount = (recordsData.records || []).length;
+                                const records = recordsData.records || [];
+                                rowCount = records.length;
+                                
+                                // Get sample values for each column (first 3 unique values)
+                                columns.forEach(col => {
+                                    const values = records
+                                        .map(r => r.fields?.[col.name])
+                                        .filter(v => v !== null && v !== undefined && v !== '')
+                                        .slice(0, 20);
+                                    const uniqueValues = [...new Set(values)].slice(0, 5);
+                                    col.sampleValues = uniqueValues;
+                                });
                             }
                         } catch (e) { /* ignore */ }
                         
@@ -925,17 +936,23 @@
             // Build context from existing tables
             let existingTablesInfo = '';
             if (tablesContext.length > 0) {
+                const formatColumn = (c, lang) => {
+                    let info = `${c.name} (${c.type})`;
+                    if (c.formula) info += lang === 'fr' ? ` [formule: ${c.formula}]` : ` [formula: ${c.formula}]`;
+                    if (c.sampleValues && c.sampleValues.length > 0) {
+                        const samples = c.sampleValues.map(v => typeof v === 'string' ? `"${v}"` : v).join(', ');
+                        info += lang === 'fr' ? ` [valeurs: ${samples}]` : ` [values: ${samples}]`;
+                    }
+                    return info;
+                };
+                
                 existingTablesInfo = currentLang === 'fr' 
                     ? `\n\nTABLES EXISTANTES DANS LE DOCUMENT:\n${tablesContext.map(t => 
-                        `- Table "${t.name}" (${t.rowCount || 0} lignes) avec colonnes: ${t.columns.map(c => 
-                            `${c.name} (${c.type})${c.formula ? ' [formule: ' + c.formula + ']' : ''}`
-                        ).join(', ')}`
-                    ).join('\n')}\n\nTu peux MODIFIER ces tables existantes (ajouter colonnes, données) ou en créer de nouvelles.\nPour UPDATE_COLUMN, génère EXACTEMENT le nombre de valeurs correspondant au nombre de lignes de la table.`
+                        `- Table "${t.name}" (${t.rowCount || 0} lignes) avec colonnes:\n  ${t.columns.map(c => formatColumn(c, 'fr')).join('\n  ')}`
+                    ).join('\n')}\n\nTu peux MODIFIER ces tables existantes. Utilise les VALEURS EXACTES montrées ci-dessus dans tes formules.\nPour UPDATE_COLUMN, génère EXACTEMENT ${tablesContext[0]?.rowCount || 'le nombre de'} valeurs.`
                     : `\n\nEXISTING TABLES IN THE DOCUMENT:\n${tablesContext.map(t => 
-                        `- Table "${t.name}" (${t.rowCount || 0} rows) with columns: ${t.columns.map(c => 
-                            `${c.name} (${c.type})${c.formula ? ' [formula: ' + c.formula + ']' : ''}`
-                        ).join(', ')}`
-                    ).join('\n')}\n\nYou can MODIFY these existing tables (add columns, data) or create new ones.\nFor UPDATE_COLUMN, generate EXACTLY the number of values matching the table's row count.`;
+                        `- Table "${t.name}" (${t.rowCount || 0} rows) with columns:\n  ${t.columns.map(c => formatColumn(c, 'en')).join('\n  ')}`
+                    ).join('\n')}\n\nYou can MODIFY these existing tables. Use the EXACT VALUES shown above in your formulas.\nFor UPDATE_COLUMN, generate EXACTLY the number of values matching the table's row count.`;
             }
 
             const prompt = currentLang === 'fr' ? 
