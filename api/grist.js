@@ -1,3 +1,10 @@
+/**
+ * Grist AI Assistant Widget - Grist API Proxy
+ * Copyright 2026 Said Hamadou (isaytoo)
+ * Licensed under the Apache License, Version 2.0
+ * https://github.com/isaytoo/grist-ai-assistant-widget
+ */
+
 // Vercel Serverless Function - Grist API Proxy
 
 module.exports = async (req, res) => {

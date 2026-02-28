@@ -1,3 +1,10 @@
+/**
+ * Grist AI Assistant Widget - AI API Proxy
+ * Copyright 2026 Said Hamadou (isaytoo)
+ * Licensed under the Apache License, Version 2.0
+ * https://github.com/isaytoo/grist-ai-assistant-widget
+ */
+
 // Vercel Serverless Function - AI API Proxy (Claude, OpenAI, Mistral, Groq, Perplexity)
 
 module.exports = async (req, res) => {
