@@ -1009,10 +1009,13 @@ Table.lookupRecords(colonne=valeur)
 === RÈGLES ABSOLUES ===
 1. RÉPONDS UNIQUEMENT à ce qui est demandé - pas d'actions supplémentaires
 2. IGNORE les colonnes marquées ⚠️FORMULE
-3. Utilise les valeurs EXACTES des [valeurs: ...] - jamais d'abréviations
-4. Pour calculs → ADD_COLUMN avec formule
-5. Pour données fixes → UPDATE_COLUMN avec liste de valeurs
+3. ⚠️ VALEURS: Regarde [valeurs: "X", "Y"] dans le contexte et utilise EXACTEMENT ces valeurs!
+   - Si Contacts.genre a [valeurs: "Homme", "Femme"] → utilise "Homme" et "Femme"
+   - JAMAIS d'abréviations comme "M", "F", "H"
+4. Pour calculs dynamiques → ADD_COLUMN avec formule Python
+5. Pour données statiques → UPDATE_COLUMN avec liste de valeurs (PAS de formules!)
 6. PROTÈGE toujours les divisions: ... if len(...) > 0 else 0
+7. UPDATE_COLUMN ne supporte QUE des valeurs statiques ["texte1", "texte2"], JAMAIS de formules
 
 Réponds UNIQUEMENT:
 {"analysis": "description courte", "actions": ["ACTION|TABLE|DETAILS"]}` :
@@ -1068,10 +1071,13 @@ Table.lookupRecords(column=value)
 === ABSOLUTE RULES ===
 1. RESPOND ONLY to what is asked - no extra actions
 2. IGNORE columns marked ⚠️FORMULA
-3. Use EXACT values from [values: ...] - never abbreviations
-4. For calculations → ADD_COLUMN with formula
-5. For fixed data → UPDATE_COLUMN with value list
+3. ⚠️ VALUES: Look at [values: "X", "Y"] in context and use EXACTLY these values!
+   - If Contacts.gender has [values: "Male", "Female"] → use "Male" and "Female"
+   - NEVER abbreviations like "M", "F", "H"
+4. For dynamic calculations → ADD_COLUMN with Python formula
+5. For static data → UPDATE_COLUMN with value list (NO formulas!)
 6. ALWAYS protect divisions: ... if len(...) > 0 else 0
+7. UPDATE_COLUMN supports ONLY static values ["text1", "text2"], NEVER formulas
 
 Respond ONLY:
 {"analysis": "short description", "actions": ["ACTION|TABLE|DETAILS"]}`;
