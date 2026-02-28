@@ -1041,7 +1041,8 @@ UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
 ✅ BONNES PRATIQUES:
 - Pour CALCULS dynamiques → ADD_COLUMN avec formule Python
 - Pour DONNÉES texte/nombres fixes → UPDATE_COLUMN avec valeurs statiques
-- Utilise les VALEURS EXACTES des colonnes (ex: "Homme" pas "M")
+- ⚠️ UTILISE UNIQUEMENT les valeurs EXACTES montrées entre guillemets dans [valeurs: ...]
+- Exemple: si [valeurs: "Homme", "Femme"] → utilise "Homme" et "Femme", JAMAIS "M", "F", "H"
 - Une action = une seule modification simple
 - Génère le NOMBRE EXACT de valeurs = nombre de lignes de la table
 
@@ -1136,7 +1137,8 @@ UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
 ✅ BEST PRACTICES:
 - For DYNAMIC calculations → ADD_COLUMN with Python formula
 - For FIXED text/number data → UPDATE_COLUMN with static values
-- Use EXACT VALUES from columns (e.g., "Male" not "M")
+- ⚠️ USE ONLY the EXACT values shown in quotes in [values: ...]
+- Example: if [values: "Male", "Female"] → use "Male" and "Female", NEVER "M", "F", "H"
 - One action = one simple modification
 - Generate EXACT number of values = table row count
 
