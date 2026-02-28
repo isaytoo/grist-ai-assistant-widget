@@ -97,6 +97,20 @@ module.exports = async (req, res) => {
             response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${gristApiKey}` }
             });
+        } else if (action === 'updateRecords') {
+            // Update existing records in a table
+            const { tableName, records } = req.body;
+            if (!tableName || !records) {
+                return res.status(400).json({ error: 'Table name and records required' });
+            }
+            response = await fetch(`${cleanUrl}/api/docs/${docId}/tables/${tableName}/records`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${gristApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ records })
+            });
         } else {
             // Test connection (default)
             response = await fetch(`${cleanUrl}/api/docs/${docId}`, {

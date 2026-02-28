@@ -948,13 +948,16 @@ FORMAT DES ACTIONS (respecte EXACTEMENT ce format):
 - CREATE_TABLE|NomTable|col1:Type,col2:Type,col3:Type
 - ADD_COLUMN|NomTable|NomColonne|formule_ou_type
 - INSERT_DATA|NomTable|[[val1,val2],[val3,val4]]
+- UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
 
 EXEMPLES:
 - CREATE_TABLE|Clients|nom:Text,email:Text,telephone:Text
 - ADD_COLUMN|Ventes|Total|SUM(Ventes.all.Montant)
 - ADD_COLUMN|Factures|TVA|$Montant * 0.2
-- ADD_COLUMN|Produits|Marge|$PrixVente - $PrixAchat
 - INSERT_DATA|Clients|[["Jean","jean@mail.com"],["Marie","marie@mail.com"]]
+- UPDATE_COLUMN|Contacts|fonction|["Directeur","Manager","Développeur"]
+
+IMPORTANT: Pour REMPLIR une colonne vide existante, utilise UPDATE_COLUMN (pas INSERT_DATA).
 
 Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
 Génère des données réalistes. DÉDUIS intelligemment les informations manquantes.` :
@@ -989,13 +992,16 @@ ACTION FORMAT (follow EXACTLY):
 - CREATE_TABLE|TableName|col1:Type,col2:Type,col3:Type
 - ADD_COLUMN|TableName|ColumnName|formula_or_type
 - INSERT_DATA|TableName|[[val1,val2],[val3,val4]]
+- UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
 
 EXAMPLES:
 - CREATE_TABLE|Clients|name:Text,email:Text,phone:Text
 - ADD_COLUMN|Sales|Total|SUM(Sales.all.Amount)
 - ADD_COLUMN|Invoices|VAT|$Amount * 0.2
-- ADD_COLUMN|Products|Margin|$SalePrice - $CostPrice
 - INSERT_DATA|Clients|[["John","john@mail.com"],["Mary","mary@mail.com"]]
+- UPDATE_COLUMN|Contacts|role|["Director","Manager","Developer"]
+
+IMPORTANT: To FILL an existing empty column, use UPDATE_COLUMN (not INSERT_DATA).
 
 Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
 Generate realistic data. DEDUCE missing information intelligently.`;
@@ -1323,6 +1329,22 @@ Generate realistic data. DEDUCE missing information intelligently.`;
                             if (rows.length > 0) {
                                 await insertDataWithContext(tableName, rows);
                                 addMessage(`✅ ${rows.length} lignes insérées dans "${tableName}" !`, false);
+                            }
+                        } else if (actionType === 'UPDATE_COLUMN' && tableName && details) {
+                            // Update a specific column with values
+                            // Format: UPDATE_COLUMN|TableName|ColumnName|[val1,val2,val3]
+                            const [colName, ...valueParts] = details.split('|');
+                            const valuesStr = valueParts.join('|');
+                            const values = [];
+                            const valMatches = valuesStr.matchAll(/["']([^"']+)["']|(\d+(?:\.\d+)?)/g);
+                            for (const match of valMatches) {
+                                const val = match[1] || match[2];
+                                const num = parseFloat(val);
+                                values.push(isNaN(num) ? val : num);
+                            }
+                            if (values.length > 0 && colName) {
+                                await updateColumnData(tableName, colName.trim(), values);
+                                addMessage(`✅ Colonne "${colName}" mise à jour dans "${tableName}" !`, false);
                             }
                         } else {
                             addMessage(`ℹ️ Action non reconnue: ${action}`, false);
@@ -1757,6 +1779,67 @@ Generate realistic data. DEDUCE missing information intelligently.`;
             }
 
             return response.json();
+        }
+
+        // Update column data for existing records
+        async function updateColumnData(tableName, colName, values) {
+            // First, get existing records to get their IDs
+            const proxyBase = config.proxyUrl || window.location.origin;
+            
+            const getResponse = await fetch(`${proxyBase}/api/grist`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gristUrl: config.gristUrl,
+                    gristApiKey: config.gristApiKey,
+                    docId: config.docId,
+                    action: 'getRecords',
+                    tableName: tableName
+                })
+            });
+            
+            if (!getResponse.ok) {
+                throw new Error('Erreur récupération des enregistrements');
+            }
+            
+            const data = await getResponse.json();
+            const existingRecords = data.records || [];
+            
+            // Build update records with IDs
+            const records = [];
+            for (let i = 0; i < Math.min(values.length, existingRecords.length); i++) {
+                records.push({
+                    id: existingRecords[i].id,
+                    fields: {
+                        [colName]: values[i]
+                    }
+                });
+            }
+            
+            if (records.length === 0) {
+                throw new Error('Aucun enregistrement à mettre à jour');
+            }
+            
+            // Update records
+            const updateResponse = await fetch(`${proxyBase}/api/grist`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gristUrl: config.gristUrl,
+                    gristApiKey: config.gristApiKey,
+                    docId: config.docId,
+                    action: 'updateRecords',
+                    tableName: tableName,
+                    records: records
+                })
+            });
+            
+            if (!updateResponse.ok) {
+                const errorData = await updateResponse.json().catch(() => ({}));
+                throw new Error(`Erreur mise à jour: ${errorData.error || updateResponse.statusText}`);
+            }
+            
+            return updateResponse.json();
         }
 
         // Add column with formula or type to Grist table
