@@ -118,7 +118,22 @@ module.exports = async (req, res) => {
             });
         }
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = { error: 'Invalid JSON response from Grist' };
+        }
+        
+        // Add more context to error responses
+        if (!response.ok) {
+            console.error('Grist API error:', response.status, data);
+            return res.status(response.status).json({
+                error: data.error || data.message || `Grist API error: ${response.status}`,
+                details: data
+            });
+        }
+        
         return res.status(response.status).json(data);
 
     } catch (error) {
