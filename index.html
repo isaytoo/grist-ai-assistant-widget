@@ -458,8 +458,11 @@
                         </select>
                     </div>
                     <div class="config-item">
-                        <label id="proxyUrlLabel">URL Proxy</label>
+                        <label id="proxyUrlLabel">URL Proxy (optionnel)</label>
                         <input type="text" id="proxyUrl" placeholder="https://your-proxy-url.com">
+                        <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                            Groq et Perplexity fonctionnent sans proxy • Claude/OpenAI nécessitent un proxy
+                        </small>
                     </div>
                     <div class="config-item">
                         <label id="apiKeyLabel">Clé API</label>
@@ -490,6 +493,16 @@
                     <div class="example-item" onclick="setExample('Crée un tableau de bord avec ventes mensuelles et formules de totaux et moyennes')">
                         <span class="example-text">Tableau de bord ventes mensuelles</span>
                     </div>
+                </div>
+
+                <div class="cors-info" style="margin-top: 12px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: var(--radius); border: 1px solid rgba(99, 102, 241, 0.2);">
+                    <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; color: var(--primary);">
+                        💡 Info CORS
+                    </h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">
+                        <strong>Groq</strong> et <strong>Perplexity</strong> fonctionnent directement sans configuration supplémentaire.<br>
+                        <strong>Claude</strong>, <strong>OpenAI</strong> et <strong>Mistral</strong> nécessitent un proxy serveur.
+                    </p>
                 </div>
 
                 <div class="input-section">
@@ -832,19 +845,86 @@ Respond ONLY with this JSON format:
 Supported types: Text, Numeric, Bool, Date, Choice, Any
 Python formulas: use Grist syntax with $ for column references`;
 
-            switch (config.aiProvider) {
-                case 'claude':
-                    return await callClaude(prompt);
-                case 'openai':
-                    return await callOpenAI(prompt);
-                case 'mistral':
-                    return await callMistral(prompt);
-                case 'groq':
-                    return await callGroq(prompt);
-                case 'perplexity':
-                    return await callPerplexity(prompt);
-                default:
-                    return { success: false, error: 'Provider not supported' };
+            // Check if provider supports CORS directly
+            if (await checkCORS(config.aiProvider)) {
+                // Use direct API call
+                return await callDirectAPI(config.aiProvider, prompt);
+            } else if (config.proxyUrl && config.keyId) {
+                // Use proxy
+                switch (config.aiProvider) {
+                    case 'claude':
+                        return await callClaude(prompt);
+                    case 'openai':
+                        return await callOpenAI(prompt);
+                    case 'mistral':
+                        return await callMistral(prompt);
+                    case 'groq':
+                        return await callGroq(prompt);
+                    case 'perplexity':
+                        return await callPerplexity(prompt);
+                    default:
+                        return { success: false, error: 'Provider not supported' };
+                }
+            } else {
+                // Show CORS error and suggest alternatives
+                return { 
+                    success: false, 
+                    error: currentLang === 'fr' 
+                        ? `CORS bloqué pour ${config.aiProvider}. Essayez Groq (gratuit et compatible CORS) ou configurez un proxy.`
+                        : `CORS blocked for ${config.aiProvider}. Try Groq (free and CORS compatible) or configure a proxy.`
+                };
+            }
+        }
+
+        // Check CORS support
+        async function checkCORS(provider) {
+            const corsProviders = ['groq', 'perplexity'];
+            return corsProviders.includes(provider);
+        }
+
+        // Direct API call for CORS-compatible providers
+        async function callDirectAPI(provider, prompt) {
+            try {
+                let response;
+                
+                if (provider === 'groq') {
+                    response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${config.apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'llama3-8b-8192',
+                            max_tokens: 1000,
+                            messages: [{ role: 'user', content: prompt }]
+                        })
+                    });
+                } else if (provider === 'perplexity') {
+                    response = await fetch('https://api.perplexity.ai/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${config.apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'llama-3.1-sonar-small-128k-online',
+                            max_tokens: 1000,
+                            messages: [{ role: 'user', content: prompt }]
+                        })
+                    });
+                }
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const parsed = JSON.parse(data.choices[0].message.content);
+                    return { success: true, analysis: parsed.analysis, actions: parsed.actions };
+                } else {
+                    return { success: false, error: data.error?.message || `${provider} API error` };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
             }
         }
 
