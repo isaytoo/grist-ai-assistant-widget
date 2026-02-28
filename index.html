@@ -842,34 +842,57 @@ Respond ONLY with this JSON format:
 Supported types: Text, Numeric, Bool, Date, Choice, Any
 Python formulas: use Grist syntax with $ for column references`;
 
-            // Check if provider supports CORS directly
-            if (await checkCORS(config.aiProvider)) {
-                // Use direct API call
-                return await callDirectAPI(config.aiProvider, prompt);
-            } else if (config.proxyUrl && config.keyId) {
-                // Use proxy
-                switch (config.aiProvider) {
-                    case 'claude':
-                        return await callClaude(prompt);
-                    case 'openai':
-                        return await callOpenAI(prompt);
-                    case 'mistral':
-                        return await callMistral(prompt);
-                    case 'groq':
-                        return await callGroq(prompt);
-                    case 'perplexity':
-                        return await callPerplexity(prompt);
-                    default:
-                        return { success: false, error: 'Provider not supported' };
-                }
+            // Use proxy if on Vercel or proxy URL is set
+            if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                return await callAIViaProxy(proxyBase, config.aiProvider, prompt);
             } else {
-                // Show CORS error and suggest alternatives
-                return { 
-                    success: false, 
-                    error: currentLang === 'fr' 
-                        ? `CORS bloqué pour ${config.aiProvider}. Essayez Groq (gratuit et compatible CORS) ou configurez un proxy.`
-                        : `CORS blocked for ${config.aiProvider}. Try Groq (free and CORS compatible) or configure a proxy.`
-                };
+                // Try direct API call for CORS-compatible providers
+                if (config.aiProvider === 'groq' || config.aiProvider === 'perplexity') {
+                    return await callDirectAPI(config.aiProvider, prompt);
+                } else {
+                    // Show CORS error and suggest alternatives
+                    return { 
+                        success: false, 
+                        error: currentLang === 'fr' 
+                            ? `CORS bloqué pour ${config.aiProvider}. Essayez Groq (gratuit et compatible CORS) ou configurez un proxy.`
+                            : `CORS blocked for ${config.aiProvider}. Try Groq (free and CORS compatible) or configure a proxy.`
+                    };
+                }
+            }
+        }
+
+        // Call AI via proxy
+        async function callAIViaProxy(proxyBase, provider, prompt) {
+            try {
+                const response = await fetch(`${proxyBase}/api/ai`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: provider,
+                        apiKey: config.apiKey,
+                        messages: [{ role: 'user', content: prompt }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Parse response based on provider
+                    let content;
+                    if (provider === 'claude') {
+                        content = data.content[0].text;
+                    } else {
+                        content = data.choices[0].message.content;
+                    }
+                    
+                    const parsed = JSON.parse(content);
+                    return { success: true, analysis: parsed.analysis, actions: parsed.actions };
+                } else {
+                    return { success: false, error: data.error?.message || `${provider} API error` };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
             }
         }
 
