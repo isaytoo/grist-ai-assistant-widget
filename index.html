@@ -919,10 +919,16 @@ Demande: "${message}"
 RÈGLES CRITIQUES:
 1. CHAQUE action doit être AUTONOME avec TOUTES les informations nécessaires
 2. TOUJOURS inclure le nom de la table dans CHAQUE action
-3. Pour les formules: utilise $NomColonne pour référencer une colonne
-4. Formules supportées: sum(), len(), max(), min(), IF(), NOW(), TODAY()
-5. Lookups: Table.lookupRecords(col=val), Table.lookupOne(col=val)
-6. Si l'utilisateur ne précise pas une table, DÉDUIS la table la plus logique du contexte
+3. SYNTAXE FORMULES GRIST (Python):
+   - Référence colonne courante: $NomColonne
+   - Somme de toutes les lignes: SUM(NomTable.all.Colonne)
+   - Moyenne: AVERAGE(NomTable.all.Colonne) ou SUM(NomTable.all.Colonne)/len(NomTable.all)
+   - Comptage: len(NomTable.all)
+   - Max/Min: max(NomTable.all.Colonne), min(NomTable.all.Colonne)
+   - Condition: "Oui" if $Colonne > 0 else "Non"
+   - Calcul simple sur ligne: $Prix * $Quantite
+4. Lookups: NomTable.lookupRecords(col=val), NomTable.lookupOne(col=val)
+5. Si l'utilisateur ne précise pas une table, DÉDUIS la table la plus logique du contexte
 
 Réponds UNIQUEMENT avec ce JSON:
 {
@@ -939,8 +945,9 @@ FORMAT DES ACTIONS (respecte EXACTEMENT ce format):
 
 EXEMPLES:
 - CREATE_TABLE|Clients|nom:Text,email:Text,telephone:Text
-- ADD_COLUMN|Ventes|Total|SUM($Montant)
+- ADD_COLUMN|Ventes|Total|SUM(Ventes.all.Montant)
 - ADD_COLUMN|Factures|TVA|$Montant * 0.2
+- ADD_COLUMN|Produits|Marge|$PrixVente - $PrixAchat
 - INSERT_DATA|Clients|[["Jean","jean@mail.com"],["Marie","marie@mail.com"]]
 
 Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
@@ -953,10 +960,16 @@ Request: "${message}"
 CRITICAL RULES:
 1. EACH action must be SELF-CONTAINED with ALL necessary information
 2. ALWAYS include the table name in EACH action
-3. For formulas: use $ColumnName to reference a column
-4. Supported formulas: sum(), len(), max(), min(), IF(), NOW(), TODAY()
-5. Lookups: Table.lookupRecords(col=val), Table.lookupOne(col=val)
-6. If user doesn't specify a table, DEDUCE the most logical table from context
+3. GRIST FORMULA SYNTAX (Python):
+   - Reference current row column: $ColumnName
+   - Sum all rows: SUM(TableName.all.Column)
+   - Average: AVERAGE(TableName.all.Column) or SUM(TableName.all.Column)/len(TableName.all)
+   - Count: len(TableName.all)
+   - Max/Min: max(TableName.all.Column), min(TableName.all.Column)
+   - Condition: "Yes" if $Column > 0 else "No"
+   - Simple row calculation: $Price * $Quantity
+4. Lookups: TableName.lookupRecords(col=val), TableName.lookupOne(col=val)
+5. If user doesn't specify a table, DEDUCE the most logical table from context
 
 Respond ONLY with this JSON:
 {
@@ -973,8 +986,9 @@ ACTION FORMAT (follow EXACTLY):
 
 EXAMPLES:
 - CREATE_TABLE|Clients|name:Text,email:Text,phone:Text
-- ADD_COLUMN|Sales|Total|SUM($Amount)
+- ADD_COLUMN|Sales|Total|SUM(Sales.all.Amount)
 - ADD_COLUMN|Invoices|VAT|$Amount * 0.2
+- ADD_COLUMN|Products|Margin|$SalePrice - $CostPrice
 - INSERT_DATA|Clients|[["John","john@mail.com"],["Mary","mary@mail.com"]]
 
 Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
