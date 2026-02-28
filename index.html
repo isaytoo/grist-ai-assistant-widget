@@ -1186,11 +1186,60 @@ Python formulas: use Grist syntax with $ for column references`;
                         }
                     } else if (action.toLowerCase().includes('ajouter') && action.toLowerCase().includes('colonne') ||
                                action.toLowerCase().includes('add') && action.toLowerCase().includes('column')) {
-                        // Add column logic - for now just log
-                        addMessage(`ℹ️ Action colonne: ${action}`, false);
+                        // Add column with formula
+                        const colMatch = action.match(/colonne\s+['"]?([^'"]+?)['"]?\s+avec\s+(?:la\s+)?formule[:\s]+(.+)/i) ||
+                                        action.match(/column\s+['"]?([^'"]+?)['"]?\s+with\s+formula[:\s]+(.+)/i);
+                        if (colMatch) {
+                            const colName = colMatch[1].trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                            const formula = colMatch[2].trim();
+                            // For now, log - adding columns requires knowing the table name
+                            addMessage(`ℹ️ Colonne "${colName}" avec formule: ${formula} (à implémenter)`, false);
+                        } else {
+                            addMessage(`ℹ️ Action colonne: ${action}`, false);
+                        }
                     } else if (action.toLowerCase().includes('insérer') || action.toLowerCase().includes('insert')) {
                         // Insert data logic
-                        addMessage(`Action: ${action}`, false);
+                        // Parse: "Insérer les données: ['Janvier', 10000], ['Février', 12000], ..."
+                        const dataMatch = action.match(/données?[:\s]+\[(.+)\]/i) || action.match(/data[:\s]+\[(.+)\]/i);
+                        if (dataMatch) {
+                            // Find the last created table name
+                            const lastTableMatch = window.pendingActions.find(a => 
+                                a.toLowerCase().includes('créer') && a.toLowerCase().includes('table') ||
+                                a.toLowerCase().includes('create') && a.toLowerCase().includes('table')
+                            );
+                            if (lastTableMatch) {
+                                let tableName = null;
+                                const tMatch = lastTableMatch.match(/(?:table|Table)\s+['"]([^'"]+)['"]/i) ||
+                                              lastTableMatch.match(/(?:table|Table)\s+(\w+)/i);
+                                if (tMatch) {
+                                    tableName = tMatch[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                                }
+                                
+                                if (tableName) {
+                                    // Parse the data rows
+                                    const rowsData = dataMatch[1];
+                                    const rows = [];
+                                    const rowMatches = rowsData.matchAll(/\[([^\]]+)\]/g);
+                                    
+                                    for (const match of rowMatches) {
+                                        const values = match[1].split(',').map(v => {
+                                            v = v.trim().replace(/^['"]|['"]$/g, '');
+                                            // Try to parse as number
+                                            const num = parseFloat(v);
+                                            return isNaN(num) ? v : num;
+                                        });
+                                        rows.push(values);
+                                    }
+                                    
+                                    if (rows.length > 0) {
+                                        await insertData(tableName, rows);
+                                        addMessage(`✅ ${rows.length} lignes insérées dans "${tableName}" !`, false);
+                                    }
+                                }
+                            }
+                        } else {
+                            addMessage(`ℹ️ Action données: ${action}`, false);
+                        }
                     }
                 }
                 
@@ -1263,6 +1312,74 @@ Python formulas: use Grist syntax with $ for column references`;
 
             if (!response.ok) {
                 throw new Error(`Erreur création table: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
+
+        // Insert data into Grist table
+        async function insertData(tableName, rows) {
+            // Get column names from the table creation action
+            const tableAction = window.pendingActions.find(a => 
+                (a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
+                a.toLowerCase().includes('table')
+            );
+            
+            let columnNames = ['col1', 'col2']; // default
+            if (tableAction) {
+                const colMatch = tableAction.match(/colonnes?[:\s]+(.+)/i) || tableAction.match(/columns?[:\s]+(.+)/i);
+                if (colMatch) {
+                    columnNames = colMatch[1].split(',').map(c => {
+                        const name = c.trim().split('(')[0].trim()
+                            .replace(/[^a-zA-Z0-9_\s]/g, '')
+                            .replace(/\s+/g, '_')
+                            .replace(/_+$/g, '')
+                            .replace(/^_+/g, '');
+                        return name || 'col';
+                    });
+                }
+            }
+            
+            // Build records array
+            const records = rows.map(row => {
+                const fields = {};
+                row.forEach((value, index) => {
+                    if (columnNames[index]) {
+                        fields[columnNames[index]] = value;
+                    }
+                });
+                return { fields };
+            });
+
+            let response;
+            
+            if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                response = await fetch(`${proxyBase}/api/grist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gristUrl: config.gristUrl,
+                        gristApiKey: config.gristApiKey,
+                        docId: config.docId,
+                        action: 'records',
+                        tableName: tableName,
+                        records: records
+                    })
+                });
+            } else {
+                response = await fetch(`${config.gristUrl}/api/docs/${config.docId}/tables/${tableName}/records`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.gristApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ records })
+                });
+            }
+
+            if (!response.ok) {
+                throw new Error(`Erreur insertion données: ${response.statusText}`);
             }
 
             return response.json();

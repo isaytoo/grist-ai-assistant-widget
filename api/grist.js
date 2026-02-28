@@ -36,6 +36,20 @@ module.exports = async (req, res) => {
                 },
                 body: JSON.stringify({ tables })
             });
+        } else if (action === 'records') {
+            // Insert records into a table
+            const { tableName, records } = req.body;
+            if (!tableName || !records) {
+                return res.status(400).json({ error: 'Table name and records required' });
+            }
+            response = await fetch(`${cleanUrl}/api/docs/${docId}/tables/${tableName}/records`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${gristApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ records })
+            });
         } else {
             // Test connection (default)
             response = await fetch(`${cleanUrl}/api/docs/${docId}`, {
