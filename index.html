@@ -1259,9 +1259,11 @@ Generate realistic data. DEDUCE missing information intelligently.`;
                 return;
             }
 
-            const executeBtn = document.querySelector('.execute-btn');
-            executeBtn.disabled = true;
-            executeBtn.innerHTML = `<span class="loading"></span><span>${t('executing')}</span>`;
+            // Disable all execute buttons
+            document.querySelectorAll('.execute-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="loading"></span><span>${t('executing')}</span>`;
+            });
 
             try {
                 for (const action of window.pendingActions) {
@@ -1495,8 +1497,11 @@ Generate realistic data. DEDUCE missing information intelligently.`;
                 addMessage(`${t('executionError')}${error.message}`, false);
             }
 
-            executeBtn.disabled = false;
-            executeBtn.innerHTML = `<span>⚡</span><span>${t('executeButton')}</span>`;
+            // Re-enable all execute buttons
+            document.querySelectorAll('.execute-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.innerHTML = `<span>⚡</span><span>${t('executeButton')}</span>`;
+            });
         }
 
         // Create table in Grist
