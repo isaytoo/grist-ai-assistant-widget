@@ -1445,8 +1445,23 @@ Respond ONLY with this JSON:
                                 values.push(isNaN(num) ? val : num);
                             }
                             if (values.length > 0 && colName) {
-                                await updateColumnData(tableName, colName.trim(), values);
-                                addMessage(`✅ Colonne "${colName}" mise à jour dans "${tableName}" !`, false);
+                                const cleanColName = colName.trim();
+                                // Check if column exists, if not create it first
+                                const tableInfo = tablesContext.find(t => t.name === tableName);
+                                const columnExists = tableInfo?.columns.some(c => c.name === cleanColName);
+                                
+                                if (!columnExists) {
+                                    // Detect type from first value
+                                    const firstVal = values[0];
+                                    const colType = typeof firstVal === 'number' ? 'Numeric' : 'Text';
+                                    await addColumn(tableName, cleanColName, colType);
+                                    addMessage(`✅ Colonne "${cleanColName}" créée dans "${tableName}"`, false);
+                                    // Refresh context
+                                    await loadTablesContext();
+                                }
+                                
+                                await updateColumnData(tableName, cleanColName, values);
+                                addMessage(`✅ Colonne "${cleanColName}" mise à jour dans "${tableName}" !`, false);
                             }
                         } else {
                             addMessage(`ℹ️ Action non reconnue: ${action}`, false);
