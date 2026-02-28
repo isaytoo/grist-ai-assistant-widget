@@ -1,41 +1,55 @@
 # Grist AI Assistant Widget
 
-Un widget Grist qui utilise l'IA pour créer automatiquement des tables, colonnes, formules Python et insérer des données.
+A Grist widget that uses AI to automatically create tables, columns, Python formulas, and insert data.
 
-## Fonctionnalités
+## Features
 
-- 🤖 **Assistant IA conversationnel** : Décrivez en français ce que vous voulez créer
-- 📊 **Création automatique de tables** : Génère des tables avec les colonnes appropriées
-- 🧮 **Formules Python intelligentes** : Claude génère les formules Grist/Python
-- 📝 **Insertion de données** : Peut insérer des données d'exemple
-- ⚡ **Exécution en un clic** : Validez et exécutez toutes les actions dans Grist
+- 🤖 **Conversational AI Assistant** : Describe in natural language what you want to create
+- 📊 **Automatic Table Creation** : Generates tables with appropriate columns
+- 🧮 **Smart Python Formulas** : Claude generates Grist/Python formulas
+- 📝 **Data Insertion** : Can insert sample data
+- ⚡ **One-Click Execution** : Validate and execute all actions in Grist
 
 ## Installation
 
-1. **Héberger le widget** :
+1. **Host the widget** :
    ```bash
-   # Sur votre serveur ou Vercel/Netlify
+   # On your server or Vercel/Netlify
    cp index.html /var/www/html/grist-ai-assistant.html
    ```
 
-2. **Ajouter dans Grist** :
-   - Ouvrir votre document Grist
+2. **Add to Grist** :
+   - Open your Grist document
    - `Add Widget` → `Custom` → `Enter URL`
-   - Coller l'URL du fichier hébergé
+   - Paste the hosted file URL
 
 ## Configuration
 
-Dans le widget, configurez les 4 éléments suivants :
+In the widget, configure the 4 following elements:
 
-1. **URL Grist** : `https://grist.example.com`
-2. **Clé API Grist** : Settings → API Key → `gristapi...`
-3. **ID Document** : Visible dans l'URL du document
-4. **Clé API Claude** : `sk-ant-...` (anthropic.com)
+1. **Grist URL** : `https://grist.example.com`
+2. **Grist API Key** : Settings → API Key → `gristapi...`
+3. **Document ID** : Visible in the document URL
+4. **Claude API Key** : `sk-ant-...` (anthropic.com)
 
-## Utilisation
+## Usage
 
-### Exemples de demandes
+### Example Requests
 
+**English:**
+```
+Create a Projects table with columns: name, budget, project_manager, status, and a profitability column that calculates (budget - cost) / budget * 100
+```
+
+```
+Add a Customers table with name, email, phone, and insert 5 sample customers
+```
+
+```
+Create a dashboard with monthly sales and total/average formulas
+```
+
+**French:**
 ```
 Crée une table Projets avec colonnes: nom, budget, chef_projet, statut, et une colonne rentabilité qui calcule (budget - cout) / budget * 100
 ```
@@ -48,71 +62,71 @@ Ajoute une table Clients avec nom, email, téléphone, et insère 5 clients fict
 Crée un tableau de bord avec ventes mensuelles et formules de totaux et moyennes
 ```
 
-### Types de colonnes supportés
+### Supported Column Types
 
-- `Text` : Texte libre
-- `Numeric` : Nombres
-- `Bool` : Booléens (Vrai/Faux)
+- `Text` : Free text
+- `Numeric` : Numbers
+- `Bool` : Booleans (True/False)
 - `Date` : Dates
-- `Choice` : Listes déroulantes
-- `Any` : Type flexible
+- `Choice` : Dropdown lists
+- `Any` : Flexible type
 
-### Formules Python
+### Python Formulas
 
-Le widget génère des formules Python compatibles Grist :
+The widget generates Grist-compatible Python formulas:
 
 ```python
-# Calculs simples
-$budget * $quantite
+# Simple calculations
+$budget * $quantity
 
 # Conditions
-IF($statut == "payé", $montant, 0)
+IF($status == "paid", $amount, 0)
 
-# Agrégations
-$Items.SUM($montant)
+# Aggregations
+$Items.SUM($amount)
 
 # Dates
-TODAY() - $date_creation
+TODAY() - $creation_date
 
-# Texte
-CONCAT($prenom, " ", $nom)
+# Text
+CONCAT($first_name, " ", $last_name)
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
-│   Utilisateur   │───▶│  Widget JS   │───▶│  Claude API     │
-│   (français)    │    │              │    │  (analyse)      │
+│     User        │───▶│  Widget JS   │───▶│  Claude API     │
+│  (natural lang) │    │              │    │  (analysis)      │
 └─────────────────┘    └──────────────┘    └─────────────────┘
                                 │
                                 ▼
                        ┌─────────────────┐
                        │  Grist API      │
-                       │  (exécution)    │
+                       │  (execution)    │
                        └─────────────────┘
 ```
 
-## Sécurité
+## Security
 
-- Les clés API sont stockées localement dans le navigateur
-- Aucune donnée n'est envoyée à des serveurs tiers
-- Communication directe avec les APIs Grist et Claude
+- API keys are stored locally in the browser
+- No data is sent to third-party servers
+- Direct communication with Grist and Claude APIs
 
-## Développement
+## Development
 
-Le widget utilise :
-- HTML5/CSS3 moderne
-- JavaScript vanilla (pas de dépendances)
-- API REST Grist
-- API Claude (Anthropic)
+The widget uses:
+- Modern HTML5/CSS3
+- Vanilla JavaScript (no dependencies)
+- Grist REST API
+- Claude API (Anthropic)
 
-## Licence
+## License
 
-Apache 2.0 - voir fichier LICENSE
+Apache 2.0 - see LICENSE file
 
 ## Support
 
-Pour toute question ou amélioration :
+For any questions or improvements:
 - GitHub : https://github.com/isaytoo/grist-ai-assistant-widget
 - Email : admin@gristup.fr

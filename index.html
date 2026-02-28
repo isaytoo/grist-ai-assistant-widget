@@ -55,6 +55,13 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .header h1 {
@@ -65,6 +72,53 @@
 
         .header .icon {
             font-size: 1.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            position: relative;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            padding: 4px;
+            gap: 0;
+        }
+
+        .lang-option {
+            padding: 6px 14px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            z-index: 1;
+            transition: color 0.3s ease;
+            user-select: none;
+        }
+
+        .lang-option.active {
+            color: var(--bg-primary);
+        }
+
+        .lang-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: var(--primary);
+            border-radius: 16px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .lang-toggle[data-lang="en"] .lang-slider {
+            transform: translateX(100%);
         }
 
         .main-content {
@@ -361,28 +415,37 @@
 <body>
     <div class="container">
         <header class="header">
-            <span class="icon">🤖</span>
-            <h1>Assistant IA Grist</h1>
+            <div class="header-left">
+                <span class="icon">🤖</span>
+                <h1 id="headerTitle">Assistant IA Grist</h1>
+            </div>
+            <div class="header-actions">
+                <div class="lang-toggle" id="langToggle">
+                    <span class="lang-option" data-lang="fr">FR</span>
+                    <span class="lang-option" data-lang="en">EN</span>
+                    <div class="lang-slider"></div>
+                </div>
+            </div>
         </header>
 
         <div class="main-content">
             <div class="config-section">
-                <h3>Configuration API</h3>
+                <h3 id="configTitle">Configuration API</h3>
                 <div class="config-grid">
                     <div class="config-item">
-                        <label>URL Grist</label>
+                        <label id="gristUrlLabel">URL Grist</label>
                         <input type="text" id="gristUrl" placeholder="https://grist.example.com">
                     </div>
                     <div class="config-item">
-                        <label>Clé API Grist</label>
+                        <label id="gristApiKeyLabel">Clé API Grist</label>
                         <input type="password" id="gristApiKey" placeholder="gristapi...">
                     </div>
                     <div class="config-item">
-                        <label>ID Document</label>
+                        <label id="docIdLabel">ID Document</label>
                         <input type="text" id="docId" placeholder="dVLKqupW1goobchCJSMdxY">
                     </div>
                     <div class="config-item">
-                        <label>Clé API Claude</label>
+                        <label id="claudeApiKeyLabel">Clé API Claude</label>
                         <input type="password" id="claudeApiKey" placeholder="sk-ant-...">
                     </div>
                 </div>
@@ -393,31 +456,31 @@
                 <div class="chat-messages" id="chatMessages">
                     <div class="message assistant">
                         <div class="message-avatar">🤖</div>
-                        <div class="message-content">
+                        <div class="message-content" id="welcomeMessage">
                             Bonjour ! Je suis votre assistant IA pour Grist. Décrivez-moi ce que vous souhaitez créer (tables, colonnes, formules Python, données) et je vais générer tout ça pour vous !
                         </div>
                     </div>
                 </div>
 
                 <div class="examples">
-                    <h4>Exemples de demandes :</h4>
+                    <h4 id="examplesTitle">Exemples de demandes :</h4>
                     <div class="example-item" onclick="setExample('Crée une table Projets avec colonnes: nom, budget, chef_projet, statut, et une colonne rentabilité qui calcule (budget - cout) / budget * 100')">
-                        Table Projets avec formule de rentabilité
+                        <span class="example-text">Table Projets avec formule de rentabilité</span>
                     </div>
                     <div class="example-item" onclick="setExample('Ajoute une table Clients avec nom, email, téléphone, et insère 5 clients fictifs')">
-                        Table Clients avec données d'exemple
+                        <span class="example-text">Table Clients avec données d'exemple</span>
                     </div>
                     <div class="example-item" onclick="setExample('Crée un tableau de bord avec ventes mensuelles et formules de totaux et moyennes')">
-                        Tableau de bord ventes mensuelles
+                        <span class="example-text">Tableau de bord ventes mensuelles</span>
                     </div>
                 </div>
 
                 <div class="input-section">
                     <div class="input-wrapper">
-                        <textarea id="userInput" rows="3" placeholder="Décrivez ce que vous voulez créer..."></textarea>
+                        <textarea id="userInput" rows="3" id="inputPlaceholder" placeholder="Décrivez ce que vous voulez créer..."></textarea>
                     </div>
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-                        <span>Envoyer</span>
+                        <span id="sendButtonText">Envoyer</span>
                         <span>→</span>
                     </button>
                 </div>
@@ -432,6 +495,119 @@
             docId: '',
             claudeApiKey: ''
         };
+
+        let currentLang = 'fr';
+
+        // Translations
+        const translations = {
+            fr: {
+                title: 'Assistant IA Grist',
+                configTitle: 'Configuration API',
+                gristUrlLabel: 'URL Grist',
+                gristApiKeyLabel: 'Clé API Grist',
+                docIdLabel: 'ID Document',
+                claudeApiKeyLabel: 'Clé API Claude',
+                welcomeMessage: 'Bonjour ! Je suis votre assistant IA pour Grist. Décrivez-moi ce que vous souhaitez créer (tables, colonnes, formules Python, données) et je vais générer tout ça pour vous !',
+                examplesTitle: 'Exemples de demandes :',
+                example1: 'Table Projets avec formule de rentabilité',
+                example2: 'Table Clients avec données d\'exemple',
+                example3: 'Tableau de bord ventes mensuelles',
+                inputPlaceholder: 'Décrivez ce que vous voulez créer...',
+                sendButtonText: 'Envoyer',
+                analyzing: 'Analyse...',
+                executeButton: 'Exécuter dans Grist',
+                executing: 'Exécution...',
+                connectionSuccess: '✅ Connexion Grist établie',
+                connectionError: '❌ Erreur de connexion Grist',
+                networkError: '❌ Erreur réseau',
+                configError: 'Veuillez remplir tous les champs Grist',
+                claudeConfigError: 'Veuillez configurer votre clé API Claude',
+                executionSuccess: '✅ Actions exécutées avec succès dans Grist !',
+                executionError: '❌ Erreur lors de l\'exécution: ',
+                incompleteConfig: 'Configuration incomplète',
+                plannedActions: 'Actions planifiées :'
+            },
+            en: {
+                title: 'Grist AI Assistant',
+                configTitle: 'API Configuration',
+                gristUrlLabel: 'Grist URL',
+                gristApiKeyLabel: 'Grist API Key',
+                docIdLabel: 'Document ID',
+                claudeApiKeyLabel: 'Claude API Key',
+                welcomeMessage: 'Hello! I am your AI assistant for Grist. Describe what you want to create (tables, columns, Python formulas, data) and I will generate everything for you!',
+                examplesTitle: 'Example requests:',
+                example1: 'Projects table with profitability formula',
+                example2: 'Customers table with sample data',
+                example3: 'Monthly sales dashboard',
+                inputPlaceholder: 'Describe what you want to create...',
+                sendButtonText: 'Send',
+                analyzing: 'Analyzing...',
+                executeButton: 'Execute in Grist',
+                executing: 'Executing...',
+                connectionSuccess: '✅ Grist connection established',
+                connectionError: '❌ Grist connection error',
+                networkError: '❌ Network error',
+                configError: 'Please fill all Grist fields',
+                claudeConfigError: 'Please configure your Claude API key',
+                executionSuccess: '✅ Actions executed successfully in Grist!',
+                executionError: '❌ Execution error: ',
+                incompleteConfig: 'Incomplete configuration',
+                plannedActions: 'Planned actions:'
+            }
+        };
+
+        function t(key) {
+            return translations[currentLang]?.[key] || translations.fr[key] || key;
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('grist-ai-lang', lang);
+            updateUILanguage();
+        }
+
+        function loadLanguage() {
+            const saved = localStorage.getItem('grist-ai-lang');
+            if (saved && (saved === 'fr' || saved === 'en')) {
+                currentLang = saved;
+            } else {
+                const browserLang = navigator.language?.substring(0, 2);
+                currentLang = browserLang === 'en' ? 'en' : 'fr';
+            }
+            updateLangToggle();
+        }
+
+        function updateLangToggle() {
+            const toggle = document.getElementById('langToggle');
+            toggle.setAttribute('data-lang', currentLang);
+            toggle.querySelectorAll('.lang-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.lang === currentLang);
+            });
+        }
+
+        function updateUILanguage() {
+            // Update header
+            document.getElementById('headerTitle').textContent = t('title');
+            
+            // Update config section
+            document.getElementById('configTitle').textContent = t('configTitle');
+            document.getElementById('gristUrlLabel').textContent = t('gristUrlLabel');
+            document.getElementById('gristApiKeyLabel').textContent = t('gristApiKeyLabel');
+            document.getElementById('docIdLabel').textContent = t('docIdLabel');
+            document.getElementById('claudeApiKeyLabel').textContent = t('claudeApiKeyLabel');
+            
+            // Update chat section
+            document.getElementById('welcomeMessage').textContent = t('welcomeMessage');
+            document.getElementById('examplesTitle').textContent = t('examplesTitle');
+            document.getElementById('sendButtonText').textContent = t('sendButtonText');
+            document.getElementById('inputPlaceholder').placeholder = t('inputPlaceholder');
+            
+            // Update examples
+            document.querySelectorAll('.example-text').forEach((el, index) => {
+                const key = `example${index + 1}`;
+                el.textContent = t(key);
+            });
+        }
 
         // Load config from localStorage
         function loadConfig() {
@@ -463,7 +639,7 @@
             const statusDiv = document.getElementById('configStatus');
             
             if (!config.gristUrl || !config.gristApiKey || !config.docId) {
-                statusDiv.innerHTML = '<div class="config-status error">Veuillez remplir tous les champs Grist</div>';
+                statusDiv.innerHTML = `<div class="config-status error">${t('configError')}</div>`;
                 return;
             }
 
@@ -475,12 +651,12 @@
                 });
 
                 if (response.ok) {
-                    statusDiv.innerHTML = '<div class="config-status success">✅ Connexion Grist établie</div>';
+                    statusDiv.innerHTML = `<div class="config-status success">${t('connectionSuccess')}</div>`;
                 } else {
-                    statusDiv.innerHTML = '<div class="config-status error">❌ Erreur de connexion Grist</div>';
+                    statusDiv.innerHTML = `<div class="config-status error">${t('connectionError')}</div>`;
                 }
             } catch (error) {
-                statusDiv.innerHTML = '<div class="config-status error">❌ Erreur réseau</div>';
+                statusDiv.innerHTML = `<div class="config-status error">${t('networkError')}</div>`;
             }
         }
 
@@ -504,11 +680,11 @@
             if (actions && !isUser) {
                 messageHTML += `
                     <div class="actions-preview">
-                        <h4>Actions planifiées :</h4>
+                        <h4>${t('plannedActions')}</h4>
                         ${actions.map(action => `<div class="action-item">${action}</div>`).join('')}
                         <button class="execute-btn" onclick="executeActions()">
                             <span>⚡</span>
-                            <span>Exécuter dans Grist</span>
+                            <span>${t('executeButton')}</span>
                         </button>
                     </div>
                 `;
@@ -528,7 +704,7 @@
             if (!message) return;
             
             if (!config.claudeApiKey) {
-                addMessage('Veuillez configurer votre clé API Claude dans la section Configuration API.', false);
+                addMessage(t('claudeConfigError'), false);
                 return;
             }
 
@@ -539,7 +715,7 @@
             // Disable send button
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
-            sendBtn.innerHTML = '<span class="loading"></span><span>Analyse...</span>';
+            sendBtn.innerHTML = `<span class="loading"></span><span>${t('analyzing')}</span>`;
 
             try {
                 // Call Claude API
@@ -594,48 +770,48 @@ Formules Python: utilise la syntaxe Grist avec $ pour les références de colonn
 
             // Re-enable send button
             sendBtn.disabled = false;
-            sendBtn.innerHTML = '<span>Envoyer</span><span>→</span>';
+            sendBtn.innerHTML = `<span>${t('sendButtonText')}</span><span>→</span>`;
         }
 
         // Execute actions in Grist
         async function executeActions() {
             if (!window.pendingActions || !config.gristUrl || !config.gristApiKey || !config.docId) {
-                addMessage('Configuration incomplète', false);
+                addMessage(t('incompleteConfig'), false);
                 return;
             }
 
             const executeBtn = document.querySelector('.execute-btn');
             executeBtn.disabled = true;
-            executeBtn.innerHTML = '<span class="loading"></span><span>Exécution...</span>';
+            executeBtn.innerHTML = `<span class="loading"></span><span>${t('executing')}</span>`;
 
             try {
                 for (const action of window.pendingActions) {
                     // Parse action and execute corresponding Grist API call
-                    if (action.includes('Créer la table')) {
+                    if (action.includes('Créer la table') || action.includes('Create table')) {
                         // Extract table name and columns
-                        const match = action.match(/Créer la table (\w+) avec colonnes: (.+)/);
+                        const match = action.match(/(?:Créer la table|Create table) (\w+) avec colonnes: (.+)|with columns: (.+)/);
                         if (match) {
                             const tableName = match[1];
-                            const columns = match[2];
+                            const columns = match[2] || match[3];
                             await createTable(tableName, columns);
                         }
-                    } else if (action.includes('Ajouter la colonne')) {
+                    } else if (action.includes('Ajouter la colonne') || action.includes('Add column')) {
                         // Add column logic
                         addMessage(`Action: ${action}`, false);
-                    } else if (action.includes('Insérer les données')) {
+                    } else if (action.includes('Insérer les données') || action.includes('Insert data')) {
                         // Insert data logic
                         addMessage(`Action: ${action}`, false);
                     }
                 }
                 
-                addMessage('✅ Actions exécutées avec succès dans Grist !', false);
+                addMessage(t('executionSuccess'), false);
                 delete window.pendingActions;
             } catch (error) {
-                addMessage(`❌ Erreur lors de l'exécution: ${error.message}`, false);
+                addMessage(`${t('executionError')}${error.message}`, false);
             }
 
             executeBtn.disabled = false;
-            executeBtn.innerHTML = '<span>⚡</span><span>Exécuter dans Grist</span>';
+            executeBtn.innerHTML = `<span>⚡</span><span>${t('executeButton')}</span>`;
         }
 
         // Create table in Grist
@@ -677,6 +853,14 @@ Formules Python: utilise la syntaxe Grist avec $ pour les références de colonn
         document.getElementById('docId').addEventListener('change', saveConfig);
         document.getElementById('claudeApiKey').addEventListener('change', saveConfig);
 
+        // Language toggle
+        document.querySelectorAll('.lang-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                setLanguage(opt.dataset.lang);
+                updateLangToggle();
+            });
+        });
+
         document.getElementById('userInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -685,6 +869,7 @@ Formules Python: utilise la syntaxe Grist avec $ pour les références de colonn
         });
 
         // Initialize
+        loadLanguage();
         loadConfig();
         testConnection();
     </script>
