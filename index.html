@@ -911,72 +911,74 @@
             }
 
             const prompt = currentLang === 'fr' ? 
-                `Tu es un EXPERT Grist avec une connaissance approfondie des formules Python Grist. 
-Tu dois générer des actions PRÉCISES et COMPLÈTES pour créer ou MODIFIER des tables.
+                `Tu es un EXPERT Grist. Tu génères des actions STRUCTURÉES et COMPLÈTES.
 ${existingTablesInfo}
 
 Demande: "${message}"
 
-RÈGLES IMPORTANTES:
-1. Utilise TOUJOURS la syntaxe Grist pour les formules: $NomColonne pour référencer une colonne
-2. Les formules Python Grist supportent: sum(), len(), max(), min(), MOYENNE via sum()/len()
-3. Pour les lookups: Table.lookupRecords(colonne=valeur) ou Table.lookupOne(colonne=valeur)
-4. Pour les références entre tables: $RefColonne.AutreColonne
-5. Fonctions date: NOW(), TODAY(), DATEDIF(), DATEADD()
-6. Conditions: IF($col > 0, "Oui", "Non")
+RÈGLES CRITIQUES:
+1. CHAQUE action doit être AUTONOME avec TOUTES les informations nécessaires
+2. TOUJOURS inclure le nom de la table dans CHAQUE action
+3. Pour les formules: utilise $NomColonne pour référencer une colonne
+4. Formules supportées: sum(), len(), max(), min(), IF(), NOW(), TODAY()
+5. Lookups: Table.lookupRecords(col=val), Table.lookupOne(col=val)
+6. Si l'utilisateur ne précise pas une table, DÉDUIS la table la plus logique du contexte
 
-Réponds UNIQUEMENT avec ce format JSON:
+Réponds UNIQUEMENT avec ce JSON:
 {
-  "analysis": "Brève analyse de ce qu'il faut faire",
+  "analysis": "Ce que je vais faire",
   "actions": [
-    "Créer la table 'NomTable' avec colonnes: colonne1 (Text), colonne2 (Numeric), colonne3 (Date)",
-    "Ajouter la colonne 'Total' dans table 'NomTable' avec formule: SUM($Ventes)",
-    "Ajouter la colonne 'Moyenne' dans table 'NomTable' avec formule: $Total / len(NomTable.all)",
-    "Insérer les données dans 'NomTable': [['valeur1', 100], ['valeur2', 200], ['valeur3', 150]]"
+    "ACTION_TYPE|TABLE_NAME|DETAILS"
   ]
 }
 
-ACTIONS POSSIBLES:
-- Créer la table 'Nom' avec colonnes: col1 (Type), col2 (Type)
-- Ajouter la colonne 'NomCol' dans table 'NomTable' avec formule: FORMULE
-- Insérer les données dans 'NomTable': [[val1, val2], [val3, val4]]
+FORMAT DES ACTIONS (respecte EXACTEMENT ce format):
+- CREATE_TABLE|NomTable|col1:Type,col2:Type,col3:Type
+- ADD_COLUMN|NomTable|NomColonne|formule_ou_type
+- INSERT_DATA|NomTable|[[val1,val2],[val3,val4]]
 
-Types Grist: Text, Numeric, Int, Bool, Date, DateTime, Choice, ChoiceList, Ref, RefList, Attachments, Any
-Génère des données réalistes et des formules fonctionnelles Grist.
-Si tu modifies une table existante, utilise le NOM EXACT de la table du contexte.` :
-                `You are a Grist EXPERT with deep knowledge of Grist Python formulas.
-You must generate PRECISE and COMPLETE actions to create or MODIFY tables.
+EXEMPLES:
+- CREATE_TABLE|Clients|nom:Text,email:Text,telephone:Text
+- ADD_COLUMN|Ventes|Total|SUM($Montant)
+- ADD_COLUMN|Factures|TVA|$Montant * 0.2
+- INSERT_DATA|Clients|[["Jean","jean@mail.com"],["Marie","marie@mail.com"]]
+
+Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
+Génère des données réalistes. DÉDUIS intelligemment les informations manquantes.` :
+                `You are a Grist EXPERT. Generate STRUCTURED and COMPLETE actions.
 ${existingTablesInfo}
 
 Request: "${message}"
 
-IMPORTANT RULES:
-1. ALWAYS use Grist syntax for formulas: $ColumnName to reference a column
-2. Grist Python formulas support: sum(), len(), max(), min(), AVERAGE via sum()/len()
-3. For lookups: Table.lookupRecords(column=value) or Table.lookupOne(column=value)
-4. For references between tables: $RefColumn.OtherColumn
-5. Date functions: NOW(), TODAY(), DATEDIF(), DATEADD()
-6. Conditions: IF($col > 0, "Yes", "No")
+CRITICAL RULES:
+1. EACH action must be SELF-CONTAINED with ALL necessary information
+2. ALWAYS include the table name in EACH action
+3. For formulas: use $ColumnName to reference a column
+4. Supported formulas: sum(), len(), max(), min(), IF(), NOW(), TODAY()
+5. Lookups: Table.lookupRecords(col=val), Table.lookupOne(col=val)
+6. If user doesn't specify a table, DEDUCE the most logical table from context
 
-Respond ONLY with this JSON format:
+Respond ONLY with this JSON:
 {
-  "analysis": "Brief analysis of what needs to be done",
+  "analysis": "What I will do",
   "actions": [
-    "Create table 'TableName' with columns: column1 (Text), column2 (Numeric), column3 (Date)",
-    "Add column 'Total' in table 'TableName' with formula: SUM($Sales)",
-    "Add column 'Average' in table 'TableName' with formula: $Total / len(TableName.all)",
-    "Insert data in 'TableName': [['value1', 100], ['value2', 200], ['value3', 150]]"
+    "ACTION_TYPE|TABLE_NAME|DETAILS"
   ]
 }
 
-ACTIONS POSSIBLES:
-- Create table 'Name' with columns: col1 (Type), col2 (Type)
-- Add column 'ColName' in table 'TableName' with formula: FORMULA
-- Insert data in 'TableName': [[val1, val2], [val3, val4]]
+ACTION FORMAT (follow EXACTLY):
+- CREATE_TABLE|TableName|col1:Type,col2:Type,col3:Type
+- ADD_COLUMN|TableName|ColumnName|formula_or_type
+- INSERT_DATA|TableName|[[val1,val2],[val3,val4]]
 
-Grist types: Text, Numeric, Int, Bool, Date, DateTime, Choice, ChoiceList, Ref, RefList, Attachments, Any
-Generate realistic data and functional Grist formulas.
-If modifying an existing table, use the EXACT table name from the context.`;
+EXAMPLES:
+- CREATE_TABLE|Clients|name:Text,email:Text,phone:Text
+- ADD_COLUMN|Sales|Total|SUM($Amount)
+- ADD_COLUMN|Invoices|VAT|$Amount * 0.2
+- INSERT_DATA|Clients|[["John","john@mail.com"],["Mary","mary@mail.com"]]
+
+Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
+Generate realistic data. DEDUCE missing information intelligently.`;
 
             // Use proxy if on Vercel or proxy URL is set
             if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
@@ -1250,7 +1252,50 @@ If modifying an existing table, use the EXACT table name from the context.`;
 
             try {
                 for (const action of window.pendingActions) {
-                    // Parse action and execute corresponding Grist API call
+                    // Check for new structured format: ACTION_TYPE|TABLE_NAME|DETAILS
+                    if (action.includes('|')) {
+                        const parts = action.split('|');
+                        const actionType = parts[0]?.trim().toUpperCase();
+                        const tableName = parts[1]?.trim();
+                        const details = parts.slice(2).join('|').trim();
+
+                        if (actionType === 'CREATE_TABLE' && tableName && details) {
+                            // Parse columns: col1:Type,col2:Type
+                            const columnsStr = details.split(',').map(c => {
+                                const [name, type] = c.split(':');
+                                return `${name?.trim()} (${type?.trim() || 'Text'})`;
+                            }).join(', ');
+                            await createTable(tableName, columnsStr);
+                            addMessage(`✅ Table "${tableName}" créée !`, false);
+                        } else if (actionType === 'ADD_COLUMN' && tableName && details) {
+                            // details = ColumnName|formula_or_type
+                            const [colName, ...formulaParts] = details.split('|');
+                            const formula = formulaParts.join('|') || 'Text';
+                            await addColumn(tableName, colName.trim(), formula.trim());
+                            addMessage(`✅ Colonne "${colName}" ajoutée à "${tableName}" !`, false);
+                        } else if (actionType === 'INSERT_DATA' && tableName && details) {
+                            // Parse data: [[val1,val2],[val3,val4]]
+                            const rows = [];
+                            const rowMatches = details.matchAll(/\[([^\[\]]+)\]/g);
+                            for (const match of rowMatches) {
+                                const values = match[1].split(',').map(v => {
+                                    v = v.trim().replace(/^["']|["']$/g, '');
+                                    const num = parseFloat(v);
+                                    return isNaN(num) ? v : num;
+                                });
+                                if (values.length > 0) rows.push(values);
+                            }
+                            if (rows.length > 0) {
+                                await insertDataWithContext(tableName, rows);
+                                addMessage(`✅ ${rows.length} lignes insérées dans "${tableName}" !`, false);
+                            }
+                        } else {
+                            addMessage(`ℹ️ Action non reconnue: ${action}`, false);
+                        }
+                        continue; // Skip old format parsing
+                    }
+
+                    // OLD FORMAT FALLBACK - Parse action and execute corresponding Grist API call
                     if (action.toLowerCase().includes('créer') && action.toLowerCase().includes('table') || 
                         action.toLowerCase().includes('create') && action.toLowerCase().includes('table')) {
                         
@@ -1289,7 +1334,7 @@ If modifying an existing table, use the EXACT table name from the context.`;
                             }
                         }
                         
-                        // Pattern 3: Extract columns if mentioned separately
+                        // Extract columns if mentioned separately
                         const colMatch = action.match(/colonnes?[:\s]+(.+)/i) || action.match(/columns?[:\s]+(.+)/i);
                         if (colMatch) {
                             columns = colMatch[1];
