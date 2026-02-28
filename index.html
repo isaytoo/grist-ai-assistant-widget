@@ -826,38 +826,58 @@
         // Call AI Provider
         async function callAIProvider(message) {
             const prompt = currentLang === 'fr' ? 
-                `Tu es un expert Grist. Analyse cette demande et génère les actions exactes à exécuter via l'API Grist.
+                `Tu es un EXPERT Grist avec une connaissance approfondie des formules Python Grist. 
+Tu dois générer des actions PRÉCISES et COMPLÈTES pour créer des tables professionnelles.
 
 Demande: "${message}"
+
+RÈGLES IMPORTANTES:
+1. Utilise TOUJOURS la syntaxe Grist pour les formules: $NomColonne pour référencer une colonne
+2. Les formules Python Grist supportent: sum(), len(), max(), min(), MOYENNE via sum()/len()
+3. Pour les lookups: Table.lookupRecords(colonne=valeur) ou Table.lookupOne(colonne=valeur)
+4. Pour les références entre tables: $RefColonne.AutreColonne
+5. Fonctions date: NOW(), TODAY(), DATEDIF(), DATEADD()
+6. Conditions: IF($col > 0, "Oui", "Non")
 
 Réponds UNIQUEMENT avec ce format JSON:
 {
   "analysis": "Brève analyse de ce qu'il faut faire",
   "actions": [
-    "Créer la table NomTable avec colonnes: colonne1 (type), colonne2 (type)",
-    "Ajouter la colonne nom_colonne avec formule: $colonne1 * $colonne2",
-    "Insérer les données: [valeurs...]"
+    "Créer la table 'NomTable' avec colonnes: colonne1 (Text), colonne2 (Numeric), colonne3 (Date)",
+    "Ajouter la colonne 'Total' dans table 'NomTable' avec formule: SUM($Ventes)",
+    "Ajouter la colonne 'Moyenne' dans table 'NomTable' avec formule: $Total / len(NomTable.all)",
+    "Insérer les données dans 'NomTable': [['valeur1', 100], ['valeur2', 200], ['valeur3', 150]]"
   ]
 }
 
-Types supportés: Text, Numeric, Bool, Date, Choice, Any
-Formules Python: utilise la syntaxe Grist avec $ pour les références de colonnes` :
-                `You are a Grist expert. Analyze this request and generate the exact actions to execute via the Grist API.
+Types Grist: Text, Numeric, Int, Bool, Date, DateTime, Choice, ChoiceList, Ref, RefList, Attachments, Any
+Génère des données réalistes et des formules fonctionnelles Grist.` :
+                `You are a Grist EXPERT with deep knowledge of Grist Python formulas.
+You must generate PRECISE and COMPLETE actions to create professional tables.
 
 Request: "${message}"
+
+IMPORTANT RULES:
+1. ALWAYS use Grist syntax for formulas: $ColumnName to reference a column
+2. Grist Python formulas support: sum(), len(), max(), min(), AVERAGE via sum()/len()
+3. For lookups: Table.lookupRecords(column=value) or Table.lookupOne(column=value)
+4. For references between tables: $RefColumn.OtherColumn
+5. Date functions: NOW(), TODAY(), DATEDIF(), DATEADD()
+6. Conditions: IF($col > 0, "Yes", "No")
 
 Respond ONLY with this JSON format:
 {
   "analysis": "Brief analysis of what needs to be done",
   "actions": [
-    "Create table TableName with columns: column1 (type), column2 (type)",
-    "Add column column_name with formula: $column1 * $column2",
-    "Insert data: [values...]"
+    "Create table 'TableName' with columns: column1 (Text), column2 (Numeric), column3 (Date)",
+    "Add column 'Total' in table 'TableName' with formula: SUM($Sales)",
+    "Add column 'Average' in table 'TableName' with formula: $Total / len(TableName.all)",
+    "Insert data in 'TableName': [['value1', 100], ['value2', 200], ['value3', 150]]"
   ]
 }
 
-Supported types: Text, Numeric, Bool, Date, Choice, Any
-Python formulas: use Grist syntax with $ for column references`;
+Grist types: Text, Numeric, Int, Bool, Date, DateTime, Choice, ChoiceList, Ref, RefList, Attachments, Any
+Generate realistic data and functional Grist formulas.`;
 
             // Use proxy if on Vercel or proxy URL is set
             if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
@@ -1187,15 +1207,42 @@ Python formulas: use Grist syntax with $ for column references`;
                     } else if (action.toLowerCase().includes('ajouter') && action.toLowerCase().includes('colonne') ||
                                action.toLowerCase().includes('add') && action.toLowerCase().includes('column')) {
                         // Add column with formula
-                        const colMatch = action.match(/colonne\s+['"]?([^'"]+?)['"]?\s+avec\s+(?:la\s+)?formule[:\s]+(.+)/i) ||
-                                        action.match(/column\s+['"]?([^'"]+?)['"]?\s+with\s+formula[:\s]+(.+)/i);
+                        // Pattern: "Ajouter la colonne 'Total' dans table 'Ventes' avec formule: SUM($Montant)"
+                        const colMatch = action.match(/colonne\s+['"]?([^'"]+?)['"]?\s+(?:dans|in)\s+(?:table\s+)?['"]?([^'"]+?)['"]?\s+avec\s+(?:la\s+)?formule[:\s]+(.+)/i) ||
+                                        action.match(/column\s+['"]?([^'"]+?)['"]?\s+(?:in|dans)\s+(?:table\s+)?['"]?([^'"]+?)['"]?\s+with\s+formula[:\s]+(.+)/i);
+                        
                         if (colMatch) {
                             const colName = colMatch[1].trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-                            const formula = colMatch[2].trim();
-                            // For now, log - adding columns requires knowing the table name
-                            addMessage(`ℹ️ Colonne "${colName}" avec formule: ${formula} (à implémenter)`, false);
+                            const tableName = colMatch[2].trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                            const formula = colMatch[3].trim();
+                            
+                            await addColumn(tableName, colName, formula);
+                            addMessage(`✅ Colonne "${colName}" ajoutée à "${tableName}" avec formule !`, false);
                         } else {
-                            addMessage(`ℹ️ Action colonne: ${action}`, false);
+                            // Try simpler pattern without table name - use last created table
+                            const simpleMatch = action.match(/colonne\s+['"]?([^'"]+?)['"]?\s+avec\s+(?:la\s+)?formule[:\s]+(.+)/i) ||
+                                               action.match(/column\s+['"]?([^'"]+?)['"]?\s+with\s+formula[:\s]+(.+)/i);
+                            if (simpleMatch) {
+                                const colName = simpleMatch[1].trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                                const formula = simpleMatch[2].trim();
+                                
+                                // Find table name from previous action
+                                const tableAction = window.pendingActions.find(a => 
+                                    (a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
+                                    a.toLowerCase().includes('table')
+                                );
+                                if (tableAction) {
+                                    const tMatch = tableAction.match(/(?:table|Table)\s+['"]([^'"]+)['"]/i) ||
+                                                  tableAction.match(/(?:table|Table)\s+(\w+)/i);
+                                    if (tMatch) {
+                                        const tableName = tMatch[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                                        await addColumn(tableName, colName, formula);
+                                        addMessage(`✅ Colonne "${colName}" ajoutée à "${tableName}" avec formule !`, false);
+                                    }
+                                }
+                            } else {
+                                addMessage(`ℹ️ Action colonne: ${action}`, false);
+                            }
                         }
                     } else if (action.toLowerCase().includes('insérer') || action.toLowerCase().includes('insert')) {
                         // Insert data logic
@@ -1380,6 +1427,52 @@ Python formulas: use Grist syntax with $ for column references`;
 
             if (!response.ok) {
                 throw new Error(`Erreur insertion données: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
+
+        // Add column with formula to Grist table
+        async function addColumn(tableName, colName, formula) {
+            const columns = [{
+                id: colName,
+                fields: {
+                    type: 'Any',
+                    formula: formula,
+                    isFormula: true
+                }
+            }];
+
+            let response;
+            
+            if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                response = await fetch(`${proxyBase}/api/grist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gristUrl: config.gristUrl,
+                        gristApiKey: config.gristApiKey,
+                        docId: config.docId,
+                        action: 'columns',
+                        tableName: tableName,
+                        columns: columns
+                    })
+                });
+            } else {
+                response = await fetch(`${config.gristUrl}/api/docs/${config.docId}/tables/${tableName}/columns`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.gristApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ columns })
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`Erreur ajout colonne: ${errorData.error || response.statusText}`);
             }
 
             return response.json();

@@ -50,6 +50,20 @@ module.exports = async (req, res) => {
                 },
                 body: JSON.stringify({ records })
             });
+        } else if (action === 'columns') {
+            // Add columns to a table (with optional formula)
+            const { tableName, columns } = req.body;
+            if (!tableName || !columns) {
+                return res.status(400).json({ error: 'Table name and columns required' });
+            }
+            response = await fetch(`${cleanUrl}/api/docs/${docId}/tables/${tableName}/columns`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${gristApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ columns })
+            });
         } else {
             // Test connection (default)
             response = await fetch(`${cleanUrl}/api/docs/${docId}`, {
