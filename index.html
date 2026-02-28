@@ -508,13 +508,14 @@
                     </div>
                 </div>
 
-                <div class="cors-info" style="margin-top: 12px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: var(--radius); border: 1px solid rgba(99, 102, 241, 0.2);">
+                <div class="cors-info" id="securityNote" style="margin-top: 12px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: var(--radius); border: 1px solid rgba(99, 102, 241, 0.2);">
                     <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; color: var(--primary);">
-                        💡 Info CORS
+                        � Sécurité & CORS
                     </h4>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">
-                        <strong>Groq</strong> et <strong>Perplexity</strong> fonctionnent directement sans configuration supplémentaire.<br>
-                        <strong>Claude</strong>, <strong>OpenAI</strong> et <strong>Mistral</strong> nécessitent un proxy serveur.
+                        <strong>✅ Groq</strong> et <strong>Perplexity</strong> : appel direct, vos clés restent dans votre navigateur.<br>
+                        <strong>⚠️ Claude</strong>, <strong>OpenAI</strong>, <strong>Mistral</strong> : nécessitent un proxy. Sans proxy personnalisé, vos clés transitent par notre serveur sécurisé.<br>
+                        <a href="https://github.com/isaytoo/grist-ai-assistant-widget/blob/main/PROXY_SETUP.md" target="_blank" style="color: var(--primary); text-decoration: underline;">📖 Déployer votre propre proxy</a>
                     </p>
                 </div>
 
@@ -575,7 +576,9 @@
                 incompleteConfig: 'Configuration incomplète',
                 plannedActions: 'Actions planifiées :',
                 newConversation: 'Nouvelle conversation',
-                conversation: 'Conversation'
+                conversation: 'Conversation',
+                proxyNote: '🔒 Sans proxy personnalisé, vos clés transitent par notre serveur sécurisé. Pour plus de contrôle, utilisez Groq (CORS compatible) ou déployez votre propre proxy.',
+                corsNote: '✅ Ce provider supporte CORS - appel direct sans proxy'
             },
             en: {
                 title: 'Grist AI Assistant',
@@ -606,7 +609,9 @@
                 incompleteConfig: 'Incomplete configuration',
                 plannedActions: 'Planned actions:',
                 newConversation: 'New conversation',
-                conversation: 'Conversation'
+                conversation: 'Conversation',
+                proxyNote: '🔒 Without a custom proxy, your keys transit through our secure server. For more control, use Groq (CORS compatible) or deploy your own proxy.',
+                corsNote: '✅ This provider supports CORS - direct call without proxy'
             }
         };
 
