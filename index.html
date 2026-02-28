@@ -983,11 +983,17 @@ UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
 - Max/Min: max(Table.all.Colonne), min(Table.all.Colonne)
 
 📊 STATISTIQUES AVEC FILTRE (très important!):
-- Compter avec condition: len([r for r in Table.all if r.Colonne == "valeur"])
+- Compter avec condition fixe: len([r for r in Table.all if r.Colonne == "valeur"])
+- Compter avec référence ligne: len([r for r in AutreTable.all if r.Colonne == $MaColonne])
 - Somme filtrée: sum([r.Montant for r in Table.all if r.Categorie == "X"])
-- Moyenne filtrée: AVERAGE([r.Salaire for r in Table.all if r.Genre == "Homme"])
+- Moyenne filtrée avec valeur fixe: sum([r.Salaire for r in Contacts.all if r.genre == "Homme"]) / len([r for r in Contacts.all if r.genre == "Homme"]) if len([r for r in Contacts.all if r.genre == "Homme"]) > 0 else 0
+- Moyenne filtrée avec référence: sum([r.Salaire for r in Contacts.all if r.genre == $genre]) / len([r for r in Contacts.all if r.genre == $genre]) if len([r for r in Contacts.all if r.genre == $genre]) > 0 else 0
 - Compter les non-vides: len([r for r in Table.all if r.Colonne])
 - Compter les vides: len([r for r in Table.all if not r.Colonne])
+
+⚠️ ATTENTION DIVISION PAR ZÉRO: Toujours protéger les divisions!
+- FAUX: sum(...) / len(...)
+- CORRECT: sum(...) / len(...) if len(...) > 0 else 0
 
 📊 CALCULS AVANCÉS:
 - Pourcentage: round(len([r for r in Table.all if r.Col == "X"]) / len(Table.all) * 100, 2)
@@ -1067,11 +1073,17 @@ UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
 - Max/Min: max(Table.all.Column), min(Table.all.Column)
 
 📊 FILTERED STATISTICS (very important!):
-- Count with condition: len([r for r in Table.all if r.Column == "value"])
+- Count with fixed condition: len([r for r in Table.all if r.Column == "value"])
+- Count with row reference: len([r for r in OtherTable.all if r.Column == $MyColumn])
 - Filtered sum: sum([r.Amount for r in Table.all if r.Category == "X"])
-- Filtered average: AVERAGE([r.Salary for r in Table.all if r.Gender == "Male"])
+- Filtered average with fixed value: sum([r.Salary for r in Contacts.all if r.gender == "Male"]) / len([r for r in Contacts.all if r.gender == "Male"]) if len([r for r in Contacts.all if r.gender == "Male"]) > 0 else 0
+- Filtered average with reference: sum([r.Salary for r in Contacts.all if r.gender == $gender]) / len([r for r in Contacts.all if r.gender == $gender]) if len([r for r in Contacts.all if r.gender == $gender]) > 0 else 0
 - Count non-empty: len([r for r in Table.all if r.Column])
 - Count empty: len([r for r in Table.all if not r.Column])
+
+⚠️ DIVISION BY ZERO: Always protect divisions!
+- WRONG: sum(...) / len(...)
+- CORRECT: sum(...) / len(...) if len(...) > 0 else 0
 
 📊 ADVANCED CALCULATIONS:
 - Percentage: round(len([r for r in Table.all if r.Col == "X"]) / len(Table.all) * 100, 2)
