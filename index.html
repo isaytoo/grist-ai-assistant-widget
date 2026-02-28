@@ -807,9 +807,31 @@
                                 formula: c.fields?.formula || null
                             }));
                         
+                        // Get record count for this table
+                        let rowCount = 0;
+                        try {
+                            const recordsResponse = await fetch(`${proxyBase}/api/grist`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    gristUrl: config.gristUrl,
+                                    gristApiKey: config.gristApiKey,
+                                    docId: config.docId,
+                                    action: 'getRecords',
+                                    tableName: tableName,
+                                    limit: 1000
+                                })
+                            });
+                            if (recordsResponse.ok) {
+                                const recordsData = await recordsResponse.json();
+                                rowCount = (recordsData.records || []).length;
+                            }
+                        } catch (e) { /* ignore */ }
+                        
                         tablesContext.push({
                             name: tableName,
-                            columns: columns
+                            columns: columns,
+                            rowCount: rowCount
                         });
                     }
                 }
@@ -905,15 +927,15 @@
             if (tablesContext.length > 0) {
                 existingTablesInfo = currentLang === 'fr' 
                     ? `\n\nTABLES EXISTANTES DANS LE DOCUMENT:\n${tablesContext.map(t => 
-                        `- Table "${t.name}" avec colonnes: ${t.columns.map(c => 
+                        `- Table "${t.name}" (${t.rowCount || 0} lignes) avec colonnes: ${t.columns.map(c => 
                             `${c.name} (${c.type})${c.formula ? ' [formule: ' + c.formula + ']' : ''}`
                         ).join(', ')}`
-                    ).join('\n')}\n\nTu peux MODIFIER ces tables existantes (ajouter colonnes, données) ou en créer de nouvelles.`
+                    ).join('\n')}\n\nTu peux MODIFIER ces tables existantes (ajouter colonnes, données) ou en créer de nouvelles.\nPour UPDATE_COLUMN, génère EXACTEMENT le nombre de valeurs correspondant au nombre de lignes de la table.`
                     : `\n\nEXISTING TABLES IN THE DOCUMENT:\n${tablesContext.map(t => 
-                        `- Table "${t.name}" with columns: ${t.columns.map(c => 
+                        `- Table "${t.name}" (${t.rowCount || 0} rows) with columns: ${t.columns.map(c => 
                             `${c.name} (${c.type})${c.formula ? ' [formula: ' + c.formula + ']' : ''}`
                         ).join(', ')}`
-                    ).join('\n')}\n\nYou can MODIFY these existing tables (add columns, data) or create new ones.`;
+                    ).join('\n')}\n\nYou can MODIFY these existing tables (add columns, data) or create new ones.\nFor UPDATE_COLUMN, generate EXACTLY the number of values matching the table's row count.`;
             }
 
             const prompt = currentLang === 'fr' ? 
@@ -957,7 +979,10 @@ EXEMPLES:
 - INSERT_DATA|Clients|[["Jean","jean@mail.com"],["Marie","marie@mail.com"]]
 - UPDATE_COLUMN|Contacts|fonction|["Directeur","Manager","Développeur"]
 
-IMPORTANT: Pour REMPLIR une colonne vide existante, utilise UPDATE_COLUMN (pas INSERT_DATA).
+IMPORTANT: 
+- Pour REMPLIR une colonne vide existante, utilise UPDATE_COLUMN (pas INSERT_DATA).
+- Si l'utilisateur demande de "remplir", "compléter", "ajouter des valeurs" à une colonne vide, génère UPDATE_COLUMN avec des valeurs réalistes pour CHAQUE ligne.
+- Quand tu analyses et trouves des valeurs vides, REMPLIS-LES automatiquement avec UPDATE_COLUMN.
 
 Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
 Génère des données réalistes. DÉDUIS intelligemment les informations manquantes.` :
@@ -1001,7 +1026,10 @@ EXAMPLES:
 - INSERT_DATA|Clients|[["John","john@mail.com"],["Mary","mary@mail.com"]]
 - UPDATE_COLUMN|Contacts|role|["Director","Manager","Developer"]
 
-IMPORTANT: To FILL an existing empty column, use UPDATE_COLUMN (not INSERT_DATA).
+IMPORTANT: 
+- To FILL an existing empty column, use UPDATE_COLUMN (not INSERT_DATA).
+- If user asks to "fill", "complete", "add values" to an empty column, generate UPDATE_COLUMN with realistic values for EACH row.
+- When you analyze and find empty values, FILL THEM automatically with UPDATE_COLUMN.
 
 Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
 Generate realistic data. DEDUCE missing information intelligently.`;
