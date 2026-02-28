@@ -1028,21 +1028,25 @@ UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
 - Chercher plusieurs: Table.lookupRecords(col=val)
 - Somme liée: sum([r.Montant for r in AutreTable.lookupRecords(client=$id)])
 
-=== DIFFÉRENCE CRITIQUE ===
-⚠️ UPDATE_COLUMN = valeurs STATIQUES ["val1","val2","val3"] - pour remplir des données texte/nombres fixes
-⚠️ ADD_COLUMN avec formule = calculs DYNAMIQUES qui se mettent à jour automatiquement
+=== RÈGLES STRICTES (TRÈS IMPORTANT!) ===
 
-EXEMPLE: Pour calculer la moyenne des salaires par genre:
-✅ CORRECT: ADD_COLUMN|Stats|moy_homme|AVERAGE([r.salaire for r in Contacts.all if r.genre == "Homme"])
-❌ FAUX: UPDATE_COLUMN|Stats|moy_homme|[formule] (UPDATE_COLUMN ne supporte PAS les formules!)
+🚫 INTERDICTIONS:
+- NE JAMAIS supprimer ou recréer des tables/colonnes existantes
+- NE JAMAIS utiliser UPDATE_COLUMN avec des formules
+- NE JAMAIS insérer de données dans une colonne formule
+- NE JAMAIS utiliser INSERT_DATA si la table a déjà des lignes (utilise UPDATE_COLUMN)
 
-=== RÈGLES PRAGMATIQUES ===
-1. AGIS, ne te contente pas d'analyser
-2. Pour des CALCULS → ADD_COLUMN avec formule Python
-3. Pour des DONNÉES FIXES → UPDATE_COLUMN avec valeurs statiques
-4. Génère EXACTEMENT le nombre de valeurs = nombre de lignes
-5. Déduis la table si non précisée
-6. Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
+✅ BONNES PRATIQUES:
+- Pour CALCULS dynamiques → ADD_COLUMN avec formule Python
+- Pour DONNÉES texte/nombres fixes → UPDATE_COLUMN avec valeurs statiques
+- Utilise les VALEURS EXACTES des colonnes (ex: "Homme" pas "M")
+- Une action = une seule modification simple
+- Génère le NOMBRE EXACT de valeurs = nombre de lignes de la table
+
+📊 EXEMPLE STATISTIQUES PAR GROUPE:
+Si table Stats a colonne "genre" avec valeurs "Homme"/"Femme", et tu veux compter depuis Contacts:
+ADD_COLUMN|Stats|nombre|len([r for r in Contacts.all if r.genre == $genre])
+ADD_COLUMN|Stats|salaire_moyen|sum([r.remuneration for r in Contacts.all if r.genre == $genre]) / len([r for r in Contacts.all if r.genre == $genre]) if len([r for r in Contacts.all if r.genre == $genre]) > 0 else 0
 
 Réponds UNIQUEMENT avec ce JSON:
 {"analysis": "Ce que je fais", "actions": ["ACTION|TABLE|DETAILS"]}` :
@@ -1118,21 +1122,25 @@ UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
 - Find multiple: Table.lookupRecords(col=val)
 - Linked sum: sum([r.Amount for r in OtherTable.lookupRecords(client=$id)])
 
-=== CRITICAL DIFFERENCE ===
-⚠️ UPDATE_COLUMN = STATIC values ["val1","val2","val3"] - for filling fixed text/number data
-⚠️ ADD_COLUMN with formula = DYNAMIC calculations that update automatically
+=== STRICT RULES (VERY IMPORTANT!) ===
 
-EXAMPLE: To calculate average salary by gender:
-✅ CORRECT: ADD_COLUMN|Stats|avg_male|AVERAGE([r.salary for r in Contacts.all if r.gender == "Male"])
-❌ WRONG: UPDATE_COLUMN|Stats|avg_male|[formula] (UPDATE_COLUMN does NOT support formulas!)
+🚫 FORBIDDEN:
+- NEVER delete or recreate existing tables/columns
+- NEVER use UPDATE_COLUMN with formulas
+- NEVER insert data into a formula column
+- NEVER use INSERT_DATA if table already has rows (use UPDATE_COLUMN)
 
-=== PRAGMATIC RULES ===
-1. ACT, don't just analyze
-2. For CALCULATIONS → ADD_COLUMN with Python formula
-3. For FIXED DATA → UPDATE_COLUMN with static values
-4. Generate EXACTLY the number of values = row count
-5. Deduce the table if not specified
-6. Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
+✅ BEST PRACTICES:
+- For DYNAMIC calculations → ADD_COLUMN with Python formula
+- For FIXED text/number data → UPDATE_COLUMN with static values
+- Use EXACT VALUES from columns (e.g., "Male" not "M")
+- One action = one simple modification
+- Generate EXACT number of values = table row count
+
+📊 EXAMPLE GROUP STATISTICS:
+If Stats table has "gender" column with "Male"/"Female" values, and you want to count from Contacts:
+ADD_COLUMN|Stats|count|len([r for r in Contacts.all if r.gender == $gender])
+ADD_COLUMN|Stats|avg_salary|sum([r.salary for r in Contacts.all if r.gender == $gender]) / len([r for r in Contacts.all if r.gender == $gender]) if len([r for r in Contacts.all if r.gender == $gender]) > 0 else 0
 
 Respond ONLY with this JSON:
 {"analysis": "What I'm doing", "actions": ["ACTION|TABLE|DETAILS"]}`;
