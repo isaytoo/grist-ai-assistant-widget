@@ -473,6 +473,13 @@
             </div>
 
             <div class="chat-section">
+                <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary);">💬 Conversation</h3>
+                    <button id="newConversationBtn" onclick="newConversation()" style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); transition: all 0.2s;">
+                        <span>🔄</span>
+                        <span id="newConvText">Nouvelle conversation</span>
+                    </button>
+                </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="message assistant">
                         <div class="message-avatar">🤖</div>
@@ -560,7 +567,9 @@
                 executionSuccess: '✅ Actions exécutées avec succès dans Grist !',
                 executionError: '❌ Erreur lors de l\'exécution: ',
                 incompleteConfig: 'Configuration incomplète',
-                plannedActions: 'Actions planifiées :'
+                plannedActions: 'Actions planifiées :',
+                newConversation: 'Nouvelle conversation',
+                conversation: 'Conversation'
             },
             en: {
                 title: 'Grist AI Assistant',
@@ -589,7 +598,9 @@
                 executionSuccess: '✅ Actions executed successfully in Grist!',
                 executionError: '❌ Execution error: ',
                 incompleteConfig: 'Incomplete configuration',
-                plannedActions: 'Planned actions:'
+                plannedActions: 'Planned actions:',
+                newConversation: 'New conversation',
+                conversation: 'Conversation'
             }
         };
 
@@ -640,6 +651,9 @@
             document.getElementById('examplesTitle').textContent = t('examplesTitle');
             document.getElementById('sendButtonText').textContent = t('sendButtonText');
             document.getElementById('inputPlaceholder').placeholder = t('inputPlaceholder');
+            
+            // Update conversation header
+            document.getElementById('newConvText').textContent = t('newConversation');
             
             // Update examples
             document.querySelectorAll('.example-text').forEach((el, index) => {
@@ -765,6 +779,9 @@
             messageDiv.innerHTML = messageHTML;
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Save conversation after each message
+            saveConversation();
         }
 
         // Send message to Claude
@@ -1274,9 +1291,61 @@ Python formulas: use Grist syntax with $ for column references`;
             }
         });
 
+        // Save conversation to localStorage
+        function saveConversation() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messages = [];
+            messagesDiv.querySelectorAll('.message').forEach(msg => {
+                const isUser = msg.classList.contains('user');
+                const content = msg.querySelector('.message-content')?.innerHTML || '';
+                if (content) {
+                    messages.push({ isUser, content });
+                }
+            });
+            localStorage.setItem('grist-ai-conversation', JSON.stringify(messages));
+        }
+
+        // Load conversation from localStorage
+        function loadConversation() {
+            const saved = localStorage.getItem('grist-ai-conversation');
+            if (saved) {
+                const messages = JSON.parse(saved);
+                if (messages.length > 1) { // More than just welcome message
+                    const messagesDiv = document.getElementById('chatMessages');
+                    messagesDiv.innerHTML = ''; // Clear default
+                    
+                    messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message ${msg.isUser ? 'user' : 'assistant'}`;
+                        messageDiv.innerHTML = `
+                            <div class="message-avatar">${msg.isUser ? '👤' : '🤖'}</div>
+                            <div class="message-content">${msg.content}</div>
+                        `;
+                        messagesDiv.appendChild(messageDiv);
+                    });
+                    
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            }
+        }
+
+        // New conversation - reset chat
+        function newConversation() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML = `
+                <div class="message assistant">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content" id="welcomeMessage">${t('welcomeMessage')}</div>
+                </div>
+            `;
+            localStorage.removeItem('grist-ai-conversation');
+            delete window.pendingActions;
+        }
+
         // Initialize
         loadLanguage();
         loadConfig();
+        loadConversation();
         testConnection();
     </script>
 </body>
