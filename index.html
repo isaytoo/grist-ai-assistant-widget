@@ -1344,19 +1344,41 @@ If modifying an existing table, use the EXACT table name from the context.`;
                             }
                         }
                     } else if (action.toLowerCase().includes('insérer') || action.toLowerCase().includes('insert')) {
-                        // Insert data logic
-                        // Parse: "Insérer les données dans 'TableName': [[val1, val2], [val3, val4]]"
-                        // Or: "Insert data in 'TableName': [[val1, val2], [val3, val4]]"
+                        // Insert data logic - handle multi-line actions
+                        // Combine all insert-related actions to get full context
+                        const insertActions = window.pendingActions.filter(a => 
+                            a.toLowerCase().includes('insérer') || a.toLowerCase().includes('insert')
+                        );
+                        const fullInsertAction = insertActions.join(' ');
                         
                         let tableName = null;
                         
-                        // Try to extract table name from action
-                        const tableInActionMatch = action.match(/(?:dans|in)\s+['"]?([^'":\s]+)['"]?\s*:/i);
-                        if (tableInActionMatch) {
-                            tableName = tableInActionMatch[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                        // Try multiple patterns to extract table name
+                        const tablePatterns = [
+                            /(?:dans\s+(?:la\s+)?table|in\s+(?:the\s+)?table)\s+['"]?([A-Za-z0-9_]+)['"]?/i,
+                            /table\s+['"]([^'"]+)['"]/i,
+                            /['"]([A-Za-z][A-Za-z0-9_]*)['"]:/i
+                        ];
+                        
+                        for (const pattern of tablePatterns) {
+                            const match = fullInsertAction.match(pattern) || action.match(pattern);
+                            if (match) {
+                                tableName = match[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                                break;
+                            }
                         }
                         
-                        // If no table name in action, find from previous create table action
+                        // If no table name found, try from tablesContext (existing tables mentioned)
+                        if (!tableName && tablesContext.length > 0) {
+                            for (const table of tablesContext) {
+                                if (fullInsertAction.toLowerCase().includes(table.name.toLowerCase())) {
+                                    tableName = table.name;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // If still no table name, find from previous create table action
                         if (!tableName) {
                             const lastTableMatch = window.pendingActions.find(a => 
                                 (a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
@@ -1371,8 +1393,11 @@ If modifying an existing table, use the EXACT table name from the context.`;
                             }
                         }
                         
-                        // Parse the data
-                        const dataMatch = action.match(/:\s*\[\s*\[(.+)\]\s*\]/i) || action.match(/données?[:\s]+\[(.+)\]/i) || action.match(/data[:\s]+\[(.+)\]/i);
+                        // Parse the data from all insert actions
+                        const dataSource = fullInsertAction.length > action.length ? fullInsertAction : action;
+                        const dataMatch = dataSource.match(/\[\s*\[(.+)\]\s*\]/i) || 
+                                         dataSource.match(/données?[:\s]+\[(.+)\]/i) || 
+                                         dataSource.match(/data[:\s]+\[(.+)\]/i);
                         
                         if (dataMatch && tableName) {
                             // Parse the data rows
