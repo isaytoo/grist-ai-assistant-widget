@@ -1017,6 +1017,13 @@ Table.lookupRecords(colonne=valeur)
 6. PROTÈGE toujours les divisions: ... if len(...) > 0 else 0
 7. UPDATE_COLUMN ne supporte QUE des valeurs statiques ["texte1", "texte2"], JAMAIS de formules
 
+EXEMPLE CONCRET - Table de stats par genre:
+Si Contacts a genre [valeurs: "Homme", "Femme"] et tu dois créer une table de stats:
+1. CREATE_TABLE|Stats|genre:Text
+2. INSERT_DATA|Stats|[["Homme"],["Femme"]]
+3. ADD_COLUMN|Stats|nombre|len([r for r in Contacts.all if r.genre == $genre])
+4. ADD_COLUMN|Stats|salaire_moyen|sum([r.remuneration for r in Contacts.all if r.genre == $genre]) / len([r for r in Contacts.all if r.genre == $genre]) if len([r for r in Contacts.all if r.genre == $genre]) > 0 else 0
+
 Réponds UNIQUEMENT:
 {"analysis": "description courte", "actions": ["ACTION|TABLE|DETAILS"]}` :
                 `You are a Grist and Python EXPERT. You have absolute mastery of formulas and statistics.
@@ -1078,6 +1085,13 @@ Table.lookupRecords(column=value)
 5. For static data → UPDATE_COLUMN with value list (NO formulas!)
 6. ALWAYS protect divisions: ... if len(...) > 0 else 0
 7. UPDATE_COLUMN supports ONLY static values ["text1", "text2"], NEVER formulas
+
+CONCRETE EXAMPLE - Stats table by gender:
+If Contacts has gender [values: "Male", "Female"] and you need to create a stats table:
+1. CREATE_TABLE|Stats|gender:Text
+2. INSERT_DATA|Stats|[["Male"],["Female"]]
+3. ADD_COLUMN|Stats|count|len([r for r in Contacts.all if r.gender == $gender])
+4. ADD_COLUMN|Stats|avg_salary|sum([r.salary for r in Contacts.all if r.gender == $gender]) / len([r for r in Contacts.all if r.gender == $gender]) if len([r for r in Contacts.all if r.gender == $gender]) > 0 else 0
 
 Respond ONLY:
 {"analysis": "short description", "actions": ["ACTION|TABLE|DETAILS"]}`;
