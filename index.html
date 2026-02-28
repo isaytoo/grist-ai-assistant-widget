@@ -1115,18 +1115,47 @@ Python formulas: use Grist syntax with $ for column references`;
             try {
                 for (const action of window.pendingActions) {
                     // Parse action and execute corresponding Grist API call
-                    if (action.includes('Créer la table') || action.includes('Create table')) {
-                        // Extract table name and columns
-                        const match = action.match(/(?:Créer la table|Create table) (\w+) avec colonnes: (.+)|with columns: (.+)/);
+                    if (action.toLowerCase().includes('créer') && action.toLowerCase().includes('table') || 
+                        action.toLowerCase().includes('create') && action.toLowerCase().includes('table')) {
+                        
+                        // Extract table name - try multiple patterns
+                        let tableName = null;
+                        let columns = 'nom (Text), description (Text)'; // default columns
+                        
+                        // Pattern 1: "Créer la table NomTable avec colonnes: col1 (type), col2 (type)"
+                        let match = action.match(/(?:table|Table)\s+['"]?(\w+)['"]?\s+(?:avec colonnes|with columns)[:\s]+(.+)/i);
                         if (match) {
-                            const tableName = match[1];
-                            const columns = match[2] || match[3];
-                            await createTable(tableName, columns);
+                            tableName = match[1];
+                            columns = match[2];
                         }
-                    } else if (action.includes('Ajouter la colonne') || action.includes('Add column')) {
-                        // Add column logic
-                        addMessage(`Action: ${action}`, false);
-                    } else if (action.includes('Insérer les données') || action.includes('Insert data')) {
+                        
+                        // Pattern 2: "Créer la table 'NomTable'" or "Create table 'TableName'"
+                        if (!tableName) {
+                            match = action.match(/(?:table|Table)\s+['"]?(\w+)['"]?/i);
+                            if (match) {
+                                tableName = match[1].replace(/['"]/g, '');
+                            }
+                        }
+                        
+                        // Pattern 3: Extract columns if mentioned separately
+                        const colMatch = action.match(/colonnes?[:\s]+(.+)/i) || action.match(/columns?[:\s]+(.+)/i);
+                        if (colMatch) {
+                            columns = colMatch[1];
+                        }
+                        
+                        if (tableName) {
+                            // Clean table name (remove spaces, special chars)
+                            tableName = tableName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                            await createTable(tableName, columns);
+                            addMessage(`✅ Table "${tableName}" créée !`, false);
+                        } else {
+                            addMessage(`⚠️ Impossible d'extraire le nom de la table: ${action}`, false);
+                        }
+                    } else if (action.toLowerCase().includes('ajouter') && action.toLowerCase().includes('colonne') ||
+                               action.toLowerCase().includes('add') && action.toLowerCase().includes('column')) {
+                        // Add column logic - for now just log
+                        addMessage(`ℹ️ Action colonne: ${action}`, false);
+                    } else if (action.toLowerCase().includes('insérer') || action.toLowerCase().includes('insert')) {
                         // Insert data logic
                         addMessage(`Action: ${action}`, false);
                     }
