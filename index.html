@@ -1024,6 +1024,19 @@ Generate realistic data. DEDUCE missing information intelligently.`;
                         content = data.choices[0].message.content;
                     }
                     
+                    // Clean content: remove control characters and extract JSON
+                    content = content
+                        .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
+                        .replace(/\n/g, ' ')               // Replace newlines with spaces
+                        .replace(/\r/g, ' ')               // Replace carriage returns
+                        .trim();
+                    
+                    // Try to extract JSON from content (in case there's extra text)
+                    const jsonMatch = content.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        content = jsonMatch[0];
+                    }
+                    
                     const parsed = JSON.parse(content);
                     return { success: true, analysis: parsed.analysis, actions: parsed.actions };
                 } else {
