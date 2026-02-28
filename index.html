@@ -938,8 +938,9 @@
             if (tablesContext.length > 0) {
                 const formatColumn = (c, lang) => {
                     let info = `${c.name} (${c.type})`;
-                    if (c.formula) info += lang === 'fr' ? ` [formule: ${c.formula}]` : ` [formula: ${c.formula}]`;
-                    if (c.sampleValues && c.sampleValues.length > 0) {
+                    if (c.formula) {
+                        info += lang === 'fr' ? ` ⚠️FORMULE - NE PAS MODIFIER` : ` ⚠️FORMULA - DO NOT MODIFY`;
+                    } else if (c.sampleValues && c.sampleValues.length > 0) {
                         const samples = c.sampleValues.map(v => typeof v === 'string' ? `"${v}"` : v).join(', ');
                         info += lang === 'fr' ? ` [valeurs: ${samples}]` : ` [values: ${samples}]`;
                     }
@@ -1033,8 +1034,9 @@ UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
 🚫 INTERDICTIONS:
 - NE JAMAIS supprimer ou recréer des tables/colonnes existantes
 - NE JAMAIS utiliser UPDATE_COLUMN avec des formules
-- NE JAMAIS insérer de données dans une colonne formule
-- NE JAMAIS utiliser INSERT_DATA si la table a déjà des lignes (utilise UPDATE_COLUMN)
+- NE JAMAIS insérer de données dans une colonne marquée ⚠️FORMULE
+- NE JAMAIS utiliser INSERT_DATA si la table a déjà des lignes
+- IGNORE complètement les colonnes ⚠️FORMULE dans tes actions
 
 ✅ BONNES PRATIQUES:
 - Pour CALCULS dynamiques → ADD_COLUMN avec formule Python
@@ -1127,8 +1129,9 @@ UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
 🚫 FORBIDDEN:
 - NEVER delete or recreate existing tables/columns
 - NEVER use UPDATE_COLUMN with formulas
-- NEVER insert data into a formula column
-- NEVER use INSERT_DATA if table already has rows (use UPDATE_COLUMN)
+- NEVER insert data into columns marked ⚠️FORMULA
+- NEVER use INSERT_DATA if table already has rows
+- COMPLETELY IGNORE columns marked ⚠️FORMULA in your actions
 
 ✅ BEST PRACTICES:
 - For DYNAMIC calculations → ADD_COLUMN with Python formula
