@@ -458,6 +458,7 @@
                         <select id="aiProvider">
                             <option value="claude">Claude (Anthropic)</option>
                             <option value="openai">OpenAI GPT</option>
+                            <option value="gemini">Google Gemini</option>
                             <option value="mistral">Mistral AI</option>
                             <option value="groq">Groq</option>
                             <option value="perplexity">Perplexity</option>
@@ -467,7 +468,7 @@
                         <label id="proxyUrlLabel">URL Proxy (optionnel)</label>
                         <input type="text" id="proxyUrl" placeholder="https://your-proxy-url.com">
                         <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
-                            Groq et Perplexity fonctionnent sans proxy • Claude/OpenAI nécessitent un proxy
+                            Groq, Gemini et Perplexity fonctionnent sans proxy • Claude/OpenAI nécessitent un proxy
                         </small>
                     </div>
                     <div class="config-item">
@@ -513,7 +514,7 @@
                         � Sécurité & CORS
                     </h4>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">
-                        <strong>✅ Groq</strong> et <strong>Perplexity</strong> : appel direct, vos clés restent dans votre navigateur.<br>
+                        <strong>✅ Groq</strong>, <strong>Gemini</strong> et <strong>Perplexity</strong> : appel direct, vos clés restent dans votre navigateur.<br>
                         <strong>⚠️ Claude</strong>, <strong>OpenAI</strong>, <strong>Mistral</strong> : nécessitent un proxy. Sans proxy personnalisé, vos clés transitent par notre serveur sécurisé.<br>
                         <a href="https://github.com/isaytoo/grist-ai-assistant-widget/blob/main/PROXY_SETUP.md" target="_blank" style="color: var(--primary); text-decoration: underline;">📖 Déployer votre propre proxy</a>
                     </p>
@@ -1107,7 +1108,7 @@ Respond ONLY:
                 return await callAIViaProxy(proxyBase, config.aiProvider, prompt);
             } else {
                 // Try direct API call for CORS-compatible providers
-                if (config.aiProvider === 'groq' || config.aiProvider === 'perplexity') {
+                if (config.aiProvider === 'groq' || config.aiProvider === 'perplexity' || config.aiProvider === 'gemini') {
                     return await callDirectAPI(config.aiProvider, prompt);
                 } else {
                     // Show CORS error and suggest alternatives
@@ -1170,7 +1171,7 @@ Respond ONLY:
 
         // Check CORS support
         async function checkCORS(provider) {
-            const corsProviders = ['groq', 'perplexity'];
+            const corsProviders = ['groq', 'perplexity', 'gemini'];
             return corsProviders.includes(provider);
         }
 
@@ -1205,6 +1206,29 @@ Respond ONLY:
                             messages: [{ role: 'user', content: prompt }]
                         })
                     });
+                } else if (provider === 'gemini') {
+                    // Google Gemini API
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { maxOutputTokens: 2000 }
+                        })
+                    });
+                    
+                    const geminiData = await response.json();
+                    if (response.ok && geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        const text = geminiData.candidates[0].content.parts[0].text;
+                        // Clean JSON from markdown code blocks
+                        const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                        const parsed = JSON.parse(cleanText);
+                        return { success: true, analysis: parsed.analysis, actions: parsed.actions };
+                    } else {
+                        return { success: false, error: geminiData.error?.message || 'Gemini API error' };
+                    }
                 }
 
                 const data = await response.json();

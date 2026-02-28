@@ -5,7 +5,7 @@
  * https://github.com/isaytoo/grist-ai-assistant-widget
  */
 
-// Vercel Serverless Function - AI API Proxy (Claude, OpenAI, Mistral, Groq, Perplexity)
+// Vercel Serverless Function - AI API Proxy (Claude, OpenAI, Gemini, Mistral, Groq, Perplexity)
 
 module.exports = async (req, res) => {
     // CORS headers
@@ -106,6 +106,35 @@ module.exports = async (req, res) => {
                     })
                 });
                 break;
+
+            case 'gemini':
+                // Google Gemini API - different format
+                const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-1.5-flash'}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: messages.map(m => ({ 
+                            role: m.role === 'assistant' ? 'model' : 'user',
+                            parts: [{ text: m.content }] 
+                        })),
+                        generationConfig: { maxOutputTokens: 2000 }
+                    })
+                });
+                const geminiData = await geminiResponse.json();
+                // Transform Gemini response to standard format
+                if (geminiResponse.ok && geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return res.status(200).json({
+                        choices: [{
+                            message: {
+                                content: geminiData.candidates[0].content.parts[0].text
+                            }
+                        }]
+                    });
+                } else {
+                    return res.status(geminiResponse.status).json(geminiData);
+                }
 
             default:
                 return res.status(400).json({ error: 'Unknown provider' });
