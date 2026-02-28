@@ -685,7 +685,8 @@
         // Store API key in proxy
         async function storeApiKey() {
             try {
-                const response = await fetch(`${config.proxyUrl}/api/store-key`, {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                const response = await fetch(`${proxyBase}/api/proxy/store-key`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -718,11 +719,28 @@
             }
 
             try {
-                const response = await fetch(`${config.gristUrl}/api/docs/${config.docId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${config.gristApiKey}`
-                    }
-                });
+                let response;
+                
+                if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
+                    // Use proxy for Grist API
+                    const proxyBase = config.proxyUrl || window.location.origin;
+                    response = await fetch(`${proxyBase}/api/proxy/grist`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gristUrl: config.gristUrl,
+                            gristApiKey: config.gristApiKey,
+                            docId: config.docId
+                        })
+                    });
+                } else {
+                    // Direct call (may have CORS issues)
+                    response = await fetch(`${config.gristUrl}/api/docs/${config.docId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${config.gristApiKey}`
+                        }
+                    });
+                }
 
                 if (response.ok) {
                     statusDiv.innerHTML = `<div class="config-status success">${t('connectionSuccess')}</div>`;
@@ -930,9 +948,10 @@ Python formulas: use Grist syntax with $ for column references`;
 
         // Claude API
         async function callClaude(prompt) {
-            if (config.proxyUrl && config.keyId) {
+            if ((config.proxyUrl || window.location.origin.includes('vercel.app')) && config.keyId) {
                 // Use proxy
-                const response = await fetch(`${config.proxyUrl}/api/claude`, {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                const response = await fetch(`${proxyBase}/api/proxy/claude`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1132,19 +1151,42 @@ Python formulas: use Grist syntax with $ for column references`;
                 };
             });
 
-            const response = await fetch(`${config.gristUrl}/api/docs/${config.docId}/tables`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${config.gristApiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    tables: [{
-                        id: tableName,
-                        columns: columns
-                    }]
-                })
-            });
+            let response;
+            
+            if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
+                // Use proxy for Grist API
+                const proxyBase = config.proxyUrl || window.location.origin;
+                response = await fetch(`${proxyBase}/api/proxy/grist/tables`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        gristUrl: config.gristUrl,
+                        gristApiKey: config.gristApiKey,
+                        docId: config.docId,
+                        tables: [{
+                            id: tableName,
+                            columns: columns
+                        }]
+                    })
+                });
+            } else {
+                // Direct call (may have CORS issues)
+                response = await fetch(`${config.gristUrl}/api/docs/${config.docId}/tables`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.gristApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tables: [{
+                            id: tableName,
+                            columns: columns
+                        }]
+                    })
+                });
+            }
 
             if (!response.ok) {
                 throw new Error(`Erreur création table: ${response.statusText}`);
