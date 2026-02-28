@@ -64,6 +64,32 @@ module.exports = async (req, res) => {
                 },
                 body: JSON.stringify({ columns })
             });
+        } else if (action === 'getTables') {
+            // Get all tables with their columns
+            response = await fetch(`${cleanUrl}/api/docs/${docId}/tables`, {
+                headers: { 'Authorization': `Bearer ${gristApiKey}` }
+            });
+        } else if (action === 'getColumns') {
+            // Get columns for a specific table
+            const { tableName } = req.body;
+            if (!tableName) {
+                return res.status(400).json({ error: 'Table name required' });
+            }
+            response = await fetch(`${cleanUrl}/api/docs/${docId}/tables/${tableName}/columns`, {
+                headers: { 'Authorization': `Bearer ${gristApiKey}` }
+            });
+        } else if (action === 'getRecords') {
+            // Get records from a table
+            const { tableName, limit } = req.body;
+            if (!tableName) {
+                return res.status(400).json({ error: 'Table name required' });
+            }
+            const url = limit 
+                ? `${cleanUrl}/api/docs/${docId}/tables/${tableName}/records?limit=${limit}`
+                : `${cleanUrl}/api/docs/${docId}/tables/${tableName}/records`;
+            response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${gristApiKey}` }
+            });
         } else {
             // Test connection (default)
             response = await fetch(`${cleanUrl}/api/docs/${docId}`, {

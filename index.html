@@ -737,11 +737,80 @@
 
                 if (response.ok) {
                     statusDiv.innerHTML = `<div class="config-status success">${t('connectionSuccess')}</div>`;
+                    // Load existing tables context
+                    await loadTablesContext();
                 } else {
                     statusDiv.innerHTML = `<div class="config-status error">${t('connectionError')}</div>`;
                 }
             } catch (error) {
                 statusDiv.innerHTML = `<div class="config-status error">${t('networkError')}</div>`;
+            }
+        }
+
+        // Store tables context for AI
+        let tablesContext = [];
+
+        // Load existing tables and columns from Grist
+        async function loadTablesContext() {
+            try {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                
+                // Get all tables
+                const tablesResponse = await fetch(`${proxyBase}/api/grist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gristUrl: config.gristUrl,
+                        gristApiKey: config.gristApiKey,
+                        docId: config.docId,
+                        action: 'getTables'
+                    })
+                });
+
+                if (!tablesResponse.ok) return;
+                
+                const tablesData = await tablesResponse.json();
+                tablesContext = [];
+
+                // Get columns for each table
+                for (const table of tablesData.tables || []) {
+                    const tableName = table.id;
+                    
+                    // Skip system tables
+                    if (tableName.startsWith('_grist')) continue;
+                    
+                    const colsResponse = await fetch(`${proxyBase}/api/grist`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gristUrl: config.gristUrl,
+                            gristApiKey: config.gristApiKey,
+                            docId: config.docId,
+                            action: 'getColumns',
+                            tableName: tableName
+                        })
+                    });
+
+                    if (colsResponse.ok) {
+                        const colsData = await colsResponse.json();
+                        const columns = (colsData.columns || [])
+                            .filter(c => !c.id.startsWith('_') && c.id !== 'id')
+                            .map(c => ({
+                                name: c.id,
+                                type: c.fields?.type || 'Any',
+                                formula: c.fields?.formula || null
+                            }));
+                        
+                        tablesContext.push({
+                            name: tableName,
+                            columns: columns
+                        });
+                    }
+                }
+
+                console.log('Tables context loaded:', tablesContext);
+            } catch (error) {
+                console.error('Error loading tables context:', error);
             }
         }
 
@@ -825,9 +894,26 @@
 
         // Call AI Provider
         async function callAIProvider(message) {
+            // Build context from existing tables
+            let existingTablesInfo = '';
+            if (tablesContext.length > 0) {
+                existingTablesInfo = currentLang === 'fr' 
+                    ? `\n\nTABLES EXISTANTES DANS LE DOCUMENT:\n${tablesContext.map(t => 
+                        `- Table "${t.name}" avec colonnes: ${t.columns.map(c => 
+                            `${c.name} (${c.type})${c.formula ? ' [formule: ' + c.formula + ']' : ''}`
+                        ).join(', ')}`
+                    ).join('\n')}\n\nTu peux MODIFIER ces tables existantes (ajouter colonnes, données) ou en créer de nouvelles.`
+                    : `\n\nEXISTING TABLES IN THE DOCUMENT:\n${tablesContext.map(t => 
+                        `- Table "${t.name}" with columns: ${t.columns.map(c => 
+                            `${c.name} (${c.type})${c.formula ? ' [formula: ' + c.formula + ']' : ''}`
+                        ).join(', ')}`
+                    ).join('\n')}\n\nYou can MODIFY these existing tables (add columns, data) or create new ones.`;
+            }
+
             const prompt = currentLang === 'fr' ? 
                 `Tu es un EXPERT Grist avec une connaissance approfondie des formules Python Grist. 
-Tu dois générer des actions PRÉCISES et COMPLÈTES pour créer des tables professionnelles.
+Tu dois générer des actions PRÉCISES et COMPLÈTES pour créer ou MODIFIER des tables.
+${existingTablesInfo}
 
 Demande: "${message}"
 
@@ -850,10 +936,17 @@ Réponds UNIQUEMENT avec ce format JSON:
   ]
 }
 
+ACTIONS POSSIBLES:
+- Créer la table 'Nom' avec colonnes: col1 (Type), col2 (Type)
+- Ajouter la colonne 'NomCol' dans table 'NomTable' avec formule: FORMULE
+- Insérer les données dans 'NomTable': [[val1, val2], [val3, val4]]
+
 Types Grist: Text, Numeric, Int, Bool, Date, DateTime, Choice, ChoiceList, Ref, RefList, Attachments, Any
-Génère des données réalistes et des formules fonctionnelles Grist.` :
+Génère des données réalistes et des formules fonctionnelles Grist.
+Si tu modifies une table existante, utilise le NOM EXACT de la table du contexte.` :
                 `You are a Grist EXPERT with deep knowledge of Grist Python formulas.
-You must generate PRECISE and COMPLETE actions to create professional tables.
+You must generate PRECISE and COMPLETE actions to create or MODIFY tables.
+${existingTablesInfo}
 
 Request: "${message}"
 
@@ -876,8 +969,14 @@ Respond ONLY with this JSON format:
   ]
 }
 
+ACTIONS POSSIBLES:
+- Create table 'Name' with columns: col1 (Type), col2 (Type)
+- Add column 'ColName' in table 'TableName' with formula: FORMULA
+- Insert data in 'TableName': [[val1, val2], [val3, val4]]
+
 Grist types: Text, Numeric, Int, Bool, Date, DateTime, Choice, ChoiceList, Ref, RefList, Attachments, Any
-Generate realistic data and functional Grist formulas.`;
+Generate realistic data and functional Grist formulas.
+If modifying an existing table, use the EXACT table name from the context.`;
 
             // Use proxy if on Vercel or proxy URL is set
             if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
@@ -1246,44 +1345,61 @@ Generate realistic data and functional Grist formulas.`;
                         }
                     } else if (action.toLowerCase().includes('insérer') || action.toLowerCase().includes('insert')) {
                         // Insert data logic
-                        // Parse: "Insérer les données: ['Janvier', 10000], ['Février', 12000], ..."
-                        const dataMatch = action.match(/données?[:\s]+\[(.+)\]/i) || action.match(/data[:\s]+\[(.+)\]/i);
-                        if (dataMatch) {
-                            // Find the last created table name
+                        // Parse: "Insérer les données dans 'TableName': [[val1, val2], [val3, val4]]"
+                        // Or: "Insert data in 'TableName': [[val1, val2], [val3, val4]]"
+                        
+                        let tableName = null;
+                        
+                        // Try to extract table name from action
+                        const tableInActionMatch = action.match(/(?:dans|in)\s+['"]?([^'":\s]+)['"]?\s*:/i);
+                        if (tableInActionMatch) {
+                            tableName = tableInActionMatch[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                        }
+                        
+                        // If no table name in action, find from previous create table action
+                        if (!tableName) {
                             const lastTableMatch = window.pendingActions.find(a => 
-                                a.toLowerCase().includes('créer') && a.toLowerCase().includes('table') ||
-                                a.toLowerCase().includes('create') && a.toLowerCase().includes('table')
+                                (a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
+                                a.toLowerCase().includes('table')
                             );
                             if (lastTableMatch) {
-                                let tableName = null;
                                 const tMatch = lastTableMatch.match(/(?:table|Table)\s+['"]([^'"]+)['"]/i) ||
                                               lastTableMatch.match(/(?:table|Table)\s+(\w+)/i);
                                 if (tMatch) {
                                     tableName = tMatch[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
                                 }
-                                
-                                if (tableName) {
-                                    // Parse the data rows
-                                    const rowsData = dataMatch[1];
-                                    const rows = [];
-                                    const rowMatches = rowsData.matchAll(/\[([^\]]+)\]/g);
-                                    
-                                    for (const match of rowMatches) {
-                                        const values = match[1].split(',').map(v => {
-                                            v = v.trim().replace(/^['"]|['"]$/g, '');
-                                            // Try to parse as number
-                                            const num = parseFloat(v);
-                                            return isNaN(num) ? v : num;
-                                        });
-                                        rows.push(values);
-                                    }
-                                    
-                                    if (rows.length > 0) {
-                                        await insertData(tableName, rows);
-                                        addMessage(`✅ ${rows.length} lignes insérées dans "${tableName}" !`, false);
-                                    }
+                            }
+                        }
+                        
+                        // Parse the data
+                        const dataMatch = action.match(/:\s*\[\s*\[(.+)\]\s*\]/i) || action.match(/données?[:\s]+\[(.+)\]/i) || action.match(/data[:\s]+\[(.+)\]/i);
+                        
+                        if (dataMatch && tableName) {
+                            // Parse the data rows
+                            const rowsData = dataMatch[0];
+                            const rows = [];
+                            const rowMatches = rowsData.matchAll(/\[([^\[\]]+)\]/g);
+                            
+                            for (const match of rowMatches) {
+                                const values = match[1].split(',').map(v => {
+                                    v = v.trim().replace(/^['"]|['"]$/g, '');
+                                    // Try to parse as number
+                                    const num = parseFloat(v);
+                                    return isNaN(num) ? v : num;
+                                });
+                                if (values.length > 0 && values[0] !== '') {
+                                    rows.push(values);
                                 }
                             }
+                            
+                            if (rows.length > 0) {
+                                await insertDataWithContext(tableName, rows);
+                                addMessage(`✅ ${rows.length} lignes insérées dans "${tableName}" !`, false);
+                            } else {
+                                addMessage(`⚠️ Aucune donnée à insérer trouvée`, false);
+                            }
+                        } else if (!tableName) {
+                            addMessage(`⚠️ Table non spécifiée pour l'insertion`, false);
                         } else {
                             addMessage(`ℹ️ Action données: ${action}`, false);
                         }
@@ -1427,6 +1543,89 @@ Generate realistic data and functional Grist formulas.`;
 
             if (!response.ok) {
                 throw new Error(`Erreur insertion données: ${response.statusText}`);
+            }
+
+            return response.json();
+        }
+
+        // Insert data with context (uses existing table columns or action context)
+        async function insertDataWithContext(tableName, rows) {
+            // First, try to get column names from tablesContext (existing tables)
+            let columnNames = [];
+            const existingTable = tablesContext.find(t => t.name === tableName);
+            
+            if (existingTable && existingTable.columns.length > 0) {
+                // Use existing table columns
+                columnNames = existingTable.columns.map(c => c.name);
+            } else {
+                // Try to get from pending actions (newly created table)
+                const tableAction = window.pendingActions?.find(a => 
+                    ((a.toLowerCase().includes('créer') || a.toLowerCase().includes('create')) && 
+                    a.toLowerCase().includes('table') && 
+                    a.toLowerCase().includes(tableName.toLowerCase()))
+                );
+                
+                if (tableAction) {
+                    const colMatch = tableAction.match(/colonnes?[:\s]+(.+)/i) || tableAction.match(/columns?[:\s]+(.+)/i);
+                    if (colMatch) {
+                        columnNames = colMatch[1].split(',').map(c => {
+                            const name = c.trim().split('(')[0].trim()
+                                .replace(/[^a-zA-Z0-9_\s]/g, '')
+                                .replace(/\s+/g, '_')
+                                .replace(/_+$/g, '')
+                                .replace(/^_+/g, '');
+                            return name || 'col';
+                        });
+                    }
+                }
+            }
+            
+            // If still no columns, use generic names
+            if (columnNames.length === 0) {
+                columnNames = rows[0]?.map((_, i) => `col${i + 1}`) || ['col1', 'col2'];
+            }
+            
+            // Build records array
+            const records = rows.map(row => {
+                const fields = {};
+                row.forEach((value, index) => {
+                    if (columnNames[index]) {
+                        fields[columnNames[index]] = value;
+                    }
+                });
+                return { fields };
+            });
+
+            let response;
+            
+            if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
+                const proxyBase = config.proxyUrl || window.location.origin;
+                response = await fetch(`${proxyBase}/api/grist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gristUrl: config.gristUrl,
+                        gristApiKey: config.gristApiKey,
+                        docId: config.docId,
+                        action: 'records',
+                        tableName: tableName,
+                        records: records
+                    })
+                });
+            } else {
+                response = await fetch(`${config.gristUrl}/api/docs/${config.docId}/tables/${tableName}/records`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.gristApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ records })
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`Erreur insertion données: ${errorData.error || response.statusText}`);
             }
 
             return response.json();
