@@ -1191,10 +1191,17 @@ Python formulas: use Grist syntax with $ for column references`;
         async function createTable(tableName, columnsInfo) {
             const columns = columnsInfo.split(',').map(col => {
                 const [name, type] = col.trim().split('(');
+                // Clean column name: remove trailing underscores, special chars, trim
+                let cleanName = name.trim()
+                    .replace(/[^a-zA-Z0-9_\s]/g, '')  // Remove special chars except underscore and space
+                    .replace(/\s+/g, '_')              // Replace spaces with underscore
+                    .replace(/_+$/g, '')               // Remove trailing underscores
+                    .replace(/^_+/g, '');              // Remove leading underscores
+                
                 return {
-                    id: name.trim(),
+                    id: cleanName || 'colonne',
                     fields: {
-                        type: (type?.replace(')', '') || 'Text').trim()
+                        type: (type?.replace(')', '').replace(/[^a-zA-Z]/g, '') || 'Text').trim()
                     }
                 };
             });
