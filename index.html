@@ -957,198 +957,124 @@
             }
 
             const prompt = currentLang === 'fr' ? 
-                `Tu es un EXPERT Grist pragmatique. Tu AGIS immédiatement avec des actions concrètes.
+                `Tu es un EXPERT Grist et Python. Tu maîtrises parfaitement les formules et les statistiques.
 ${existingTablesInfo}
 
 Demande: "${message}"
 
-=== ACTIONS DISPONIBLES ===
-CREATE_TABLE|NomTable|col1:Type,col2:Type
-ADD_COLUMN|NomTable|NomColonne|formule_ou_type
-INSERT_DATA|NomTable|[[val1,val2],[val3,val4]]
-UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
+=== ACTIONS ===
+CREATE_TABLE|Table|col1:Type,col2:Type
+ADD_COLUMN|Table|Colonne|formule_python_ou_type
+INSERT_DATA|Table|[[val1,val2],[val3,val4]]
+UPDATE_COLUMN|Table|Colonne|["val1","val2"]
 
-=== QUAND UTILISER QUELLE ACTION ===
+=== FORMULES GRIST PYTHON - MAÎTRISE ABSOLUE ===
 
-📌 CREATE_TABLE - Créer une nouvelle table:
-- "crée une table clients" → CREATE_TABLE|Clients|nom:Text,email:Text,telephone:Text
-- "fais moi un tableau de ventes" → CREATE_TABLE|Ventes|produit:Text,montant:Numeric,date:Date
+� RÉFÉRENCE LIGNE COURANTE:
+$colonne → valeur de la colonne dans la ligne courante
+$prix * $quantite → calcul sur la ligne
+round($montant, 2) → arrondi
 
-📌 ADD_COLUMN - Ajouter une colonne (données OU formule):
-- "ajoute une colonne téléphone" → ADD_COLUMN|Contacts|telephone|Text
-- "calcule le total" → ADD_COLUMN|Ventes|Total|SUM(Ventes.all.Montant)
-- "ajoute la TVA" → ADD_COLUMN|Factures|TVA|$Montant * 0.2
-- "ajoute une colonne statut" → ADD_COLUMN|Taches|statut|Choice
-- "compte les lignes" → ADD_COLUMN|Table|nb_lignes|len(Table.all)
-- "calcule la moyenne" → ADD_COLUMN|Notes|moyenne|AVERAGE(Notes.all.note)
+📊 STATISTIQUES GLOBALES:
+len(Table.all) → nombre total de lignes
+SUM(Table.all.colonne) → somme de toutes les valeurs
+AVERAGE(Table.all.colonne) → moyenne
+max(Table.all.colonne) → maximum
+min(Table.all.colonne) → minimum
 
-📌 INSERT_DATA - Ajouter de NOUVELLES lignes:
-- "ajoute 5 clients" → INSERT_DATA|Clients|[["Jean","jean@mail.com"],["Marie","marie@mail.com"],...]
-- "insère des données de test" → INSERT_DATA|Table|[[val1,val2],[val3,val4],...]
+📊 STATISTIQUES FILTRÉES (CRUCIAL!):
+# Compter avec condition
+len([r for r in Table.all if r.colonne == "valeur"])
 
-📌 UPDATE_COLUMN - Remplir/modifier une colonne EXISTANTE:
-- "remplis la colonne fonction" → UPDATE_COLUMN|Contacts|fonction|["Directeur","Manager","Dev",...]
-- "la colonne X est vide, remplis-la" → UPDATE_COLUMN|Table|X|["val1","val2",...]
-- "mets à jour les statuts" → UPDATE_COLUMN|Taches|statut|["Fait","En cours","À faire",...]
-- "complète les données manquantes" → UPDATE_COLUMN|Table|colonne|[valeurs pour CHAQUE ligne]
+# Compter par référence à la ligne courante (pour tableaux croisés)
+len([r for r in Contacts.all if r.genre == $genre])
 
-=== FORMULES GRIST (Python) - SYNTAXE EXACTE ===
+# Somme filtrée
+sum([r.montant for r in Ventes.all if r.categorie == "A"])
 
-📊 STATISTIQUES DE BASE:
-- Somme: SUM(Table.all.Colonne)
-- Moyenne: AVERAGE(Table.all.Colonne)
-- Comptage total: len(Table.all)
-- Max/Min: max(Table.all.Colonne), min(Table.all.Colonne)
+# Moyenne filtrée AVEC PROTECTION DIVISION PAR ZÉRO
+sum([r.salaire for r in Contacts.all if r.genre == $genre]) / len([r for r in Contacts.all if r.genre == $genre]) if len([r for r in Contacts.all if r.genre == $genre]) > 0 else 0
 
-📊 STATISTIQUES AVEC FILTRE (très important!):
-- Compter avec condition fixe: len([r for r in Table.all if r.Colonne == "valeur"])
-- Compter avec référence ligne: len([r for r in AutreTable.all if r.Colonne == $MaColonne])
-- Somme filtrée: sum([r.Montant for r in Table.all if r.Categorie == "X"])
-- Moyenne filtrée avec valeur fixe: sum([r.Salaire for r in Contacts.all if r.genre == "Homme"]) / len([r for r in Contacts.all if r.genre == "Homme"]) if len([r for r in Contacts.all if r.genre == "Homme"]) > 0 else 0
-- Moyenne filtrée avec référence: sum([r.Salaire for r in Contacts.all if r.genre == $genre]) / len([r for r in Contacts.all if r.genre == $genre]) if len([r for r in Contacts.all if r.genre == $genre]) > 0 else 0
-- Compter les non-vides: len([r for r in Table.all if r.Colonne])
-- Compter les vides: len([r for r in Table.all if not r.Colonne])
+📐 MATHÉMATIQUES:
+# Pourcentage
+round(len([r for r in Table.all if r.col == "X"]) / len(Table.all) * 100, 2) if len(Table.all) > 0 else 0
 
-⚠️ ATTENTION DIVISION PAR ZÉRO: Toujours protéger les divisions!
-- FAUX: sum(...) / len(...)
-- CORRECT: sum(...) / len(...) if len(...) > 0 else 0
+# Écart-type
+(sum([(r.val - AVERAGE(Table.all.val))**2 for r in Table.all]) / len(Table.all))**0.5 if len(Table.all) > 0 else 0
 
-📊 CALCULS AVANCÉS:
-- Pourcentage: round(len([r for r in Table.all if r.Col == "X"]) / len(Table.all) * 100, 2)
-- Écart-type: (sum([(r.Val - AVERAGE(Table.all.Val))**2 for r in Table.all]) / len(Table.all))**0.5
-- Médiane: sorted([r.Val for r in Table.all])[len(Table.all)//2]
+🔗 LOOKUPS:
+Table.lookupOne(colonne=valeur).autre_colonne
+Table.lookupRecords(colonne=valeur)
 
-📐 CALCULS SUR LIGNE COURANTE:
-- Référence colonne: $NomColonne
-- Calcul: $Prix * $Quantite
-- Condition: "Oui" if $Col > 0 else "Non"
-- Arrondi: round($Montant, 2)
+=== RÈGLES ABSOLUES ===
+1. RÉPONDS UNIQUEMENT à ce qui est demandé - pas d'actions supplémentaires
+2. IGNORE les colonnes marquées ⚠️FORMULE
+3. Utilise les valeurs EXACTES des [valeurs: ...] - jamais d'abréviations
+4. Pour calculs → ADD_COLUMN avec formule
+5. Pour données fixes → UPDATE_COLUMN avec liste de valeurs
+6. PROTÈGE toujours les divisions: ... if len(...) > 0 else 0
 
-🔗 LOOKUPS ET RÉFÉRENCES:
-- Chercher une valeur: Table.lookupOne(col=val).autreCol
-- Chercher plusieurs: Table.lookupRecords(col=val)
-- Somme liée: sum([r.Montant for r in AutreTable.lookupRecords(client=$id)])
-
-=== RÈGLES STRICTES (TRÈS IMPORTANT!) ===
-
-🚫 INTERDICTIONS:
-- NE JAMAIS supprimer ou recréer des tables/colonnes existantes
-- NE JAMAIS utiliser UPDATE_COLUMN avec des formules
-- NE JAMAIS insérer de données dans une colonne marquée ⚠️FORMULE
-- NE JAMAIS utiliser INSERT_DATA si la table a déjà des lignes
-- IGNORE complètement les colonnes ⚠️FORMULE dans tes actions
-
-✅ BONNES PRATIQUES:
-- Pour CALCULS dynamiques → ADD_COLUMN avec formule Python
-- Pour DONNÉES texte/nombres fixes → UPDATE_COLUMN avec valeurs statiques
-- ⚠️ UTILISE UNIQUEMENT les valeurs EXACTES montrées entre guillemets dans [valeurs: ...]
-- Exemple: si [valeurs: "Homme", "Femme"] → utilise "Homme" et "Femme", JAMAIS "M", "F", "H"
-- Une action = une seule modification simple
-- Génère le NOMBRE EXACT de valeurs = nombre de lignes de la table
-
-📊 EXEMPLE STATISTIQUES PAR GROUPE:
-Si table Stats a colonne "genre" avec valeurs "Homme"/"Femme", et tu veux compter depuis Contacts:
-ADD_COLUMN|Stats|nombre|len([r for r in Contacts.all if r.genre == $genre])
-ADD_COLUMN|Stats|salaire_moyen|sum([r.remuneration for r in Contacts.all if r.genre == $genre]) / len([r for r in Contacts.all if r.genre == $genre]) if len([r for r in Contacts.all if r.genre == $genre]) > 0 else 0
-
-Réponds UNIQUEMENT avec ce JSON:
-{"analysis": "Ce que je fais", "actions": ["ACTION|TABLE|DETAILS"]}` :
-                `You are a pragmatic Grist EXPERT. You ACT immediately with concrete actions.
+Réponds UNIQUEMENT:
+{"analysis": "description courte", "actions": ["ACTION|TABLE|DETAILS"]}` :
+                `You are a Grist and Python EXPERT. You have absolute mastery of formulas and statistics.
 ${existingTablesInfo}
 
 Request: "${message}"
 
-=== AVAILABLE ACTIONS ===
-CREATE_TABLE|TableName|col1:Type,col2:Type
-ADD_COLUMN|TableName|ColumnName|formula_or_type
-INSERT_DATA|TableName|[[val1,val2],[val3,val4]]
-UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
+=== ACTIONS ===
+CREATE_TABLE|Table|col1:Type,col2:Type
+ADD_COLUMN|Table|Column|python_formula_or_type
+INSERT_DATA|Table|[[val1,val2],[val3,val4]]
+UPDATE_COLUMN|Table|Column|["val1","val2"]
 
-=== WHEN TO USE WHICH ACTION ===
+=== GRIST PYTHON FORMULAS - ABSOLUTE MASTERY ===
 
-📌 CREATE_TABLE - Create a new table:
-- "create a clients table" → CREATE_TABLE|Clients|name:Text,email:Text,phone:Text
-- "make me a sales table" → CREATE_TABLE|Sales|product:Text,amount:Numeric,date:Date
+� CURRENT ROW REFERENCE:
+$column → value of column in current row
+$price * $quantity → calculation on row
+round($amount, 2) → rounding
 
-📌 ADD_COLUMN - Add a column (data OR formula):
-- "add a phone column" → ADD_COLUMN|Contacts|phone|Text
-- "calculate the total" → ADD_COLUMN|Sales|Total|SUM(Sales.all.Amount)
-- "add VAT" → ADD_COLUMN|Invoices|VAT|$Amount * 0.2
-- "add a status column" → ADD_COLUMN|Tasks|status|Choice
-- "count the rows" → ADD_COLUMN|Table|row_count|len(Table.all)
-- "calculate the average" → ADD_COLUMN|Grades|average|AVERAGE(Grades.all.grade)
+� GLOBAL STATISTICS:
+len(Table.all) → total row count
+SUM(Table.all.column) → sum of all values
+AVERAGE(Table.all.column) → average
+max(Table.all.column) → maximum
+min(Table.all.column) → minimum
 
-📌 INSERT_DATA - Add NEW rows:
-- "add 5 clients" → INSERT_DATA|Clients|[["John","john@mail.com"],["Mary","mary@mail.com"],...]
-- "insert test data" → INSERT_DATA|Table|[[val1,val2],[val3,val4],...]
+📊 FILTERED STATISTICS (CRUCIAL!):
+# Count with condition
+len([r for r in Table.all if r.column == "value"])
 
-📌 UPDATE_COLUMN - Fill/modify an EXISTING column:
-- "fill the role column" → UPDATE_COLUMN|Contacts|role|["Director","Manager","Dev",...]
-- "column X is empty, fill it" → UPDATE_COLUMN|Table|X|["val1","val2",...]
-- "update the statuses" → UPDATE_COLUMN|Tasks|status|["Done","In Progress","To Do",...]
-- "complete missing data" → UPDATE_COLUMN|Table|column|[values for EACH row]
+# Count by current row reference (for cross-tables)
+len([r for r in Contacts.all if r.gender == $gender])
 
-=== GRIST FORMULAS (Python) - EXACT SYNTAX ===
+# Filtered sum
+sum([r.amount for r in Sales.all if r.category == "A"])
 
-📊 BASIC STATISTICS:
-- Sum: SUM(Table.all.Column)
-- Average: AVERAGE(Table.all.Column)
-- Total count: len(Table.all)
-- Max/Min: max(Table.all.Column), min(Table.all.Column)
+# Filtered average WITH DIVISION BY ZERO PROTECTION
+sum([r.salary for r in Contacts.all if r.gender == $gender]) / len([r for r in Contacts.all if r.gender == $gender]) if len([r for r in Contacts.all if r.gender == $gender]) > 0 else 0
 
-📊 FILTERED STATISTICS (very important!):
-- Count with fixed condition: len([r for r in Table.all if r.Column == "value"])
-- Count with row reference: len([r for r in OtherTable.all if r.Column == $MyColumn])
-- Filtered sum: sum([r.Amount for r in Table.all if r.Category == "X"])
-- Filtered average with fixed value: sum([r.Salary for r in Contacts.all if r.gender == "Male"]) / len([r for r in Contacts.all if r.gender == "Male"]) if len([r for r in Contacts.all if r.gender == "Male"]) > 0 else 0
-- Filtered average with reference: sum([r.Salary for r in Contacts.all if r.gender == $gender]) / len([r for r in Contacts.all if r.gender == $gender]) if len([r for r in Contacts.all if r.gender == $gender]) > 0 else 0
-- Count non-empty: len([r for r in Table.all if r.Column])
-- Count empty: len([r for r in Table.all if not r.Column])
+� MATHEMATICS:
+# Percentage
+round(len([r for r in Table.all if r.col == "X"]) / len(Table.all) * 100, 2) if len(Table.all) > 0 else 0
 
-⚠️ DIVISION BY ZERO: Always protect divisions!
-- WRONG: sum(...) / len(...)
-- CORRECT: sum(...) / len(...) if len(...) > 0 else 0
+# Standard deviation
+(sum([(r.val - AVERAGE(Table.all.val))**2 for r in Table.all]) / len(Table.all))**0.5 if len(Table.all) > 0 else 0
 
-📊 ADVANCED CALCULATIONS:
-- Percentage: round(len([r for r in Table.all if r.Col == "X"]) / len(Table.all) * 100, 2)
-- Std deviation: (sum([(r.Val - AVERAGE(Table.all.Val))**2 for r in Table.all]) / len(Table.all))**0.5
-- Median: sorted([r.Val for r in Table.all])[len(Table.all)//2]
+🔗 LOOKUPS:
+Table.lookupOne(column=value).other_column
+Table.lookupRecords(column=value)
 
-📐 CURRENT ROW CALCULATIONS:
-- Column reference: $ColumnName
-- Calculation: $Price * $Quantity
-- Condition: "Yes" if $Col > 0 else "No"
-- Round: round($Amount, 2)
+=== ABSOLUTE RULES ===
+1. RESPOND ONLY to what is asked - no extra actions
+2. IGNORE columns marked ⚠️FORMULA
+3. Use EXACT values from [values: ...] - never abbreviations
+4. For calculations → ADD_COLUMN with formula
+5. For fixed data → UPDATE_COLUMN with value list
+6. ALWAYS protect divisions: ... if len(...) > 0 else 0
 
-🔗 LOOKUPS AND REFERENCES:
-- Find one value: Table.lookupOne(col=val).otherCol
-- Find multiple: Table.lookupRecords(col=val)
-- Linked sum: sum([r.Amount for r in OtherTable.lookupRecords(client=$id)])
-
-=== STRICT RULES (VERY IMPORTANT!) ===
-
-🚫 FORBIDDEN:
-- NEVER delete or recreate existing tables/columns
-- NEVER use UPDATE_COLUMN with formulas
-- NEVER insert data into columns marked ⚠️FORMULA
-- NEVER use INSERT_DATA if table already has rows
-- COMPLETELY IGNORE columns marked ⚠️FORMULA in your actions
-
-✅ BEST PRACTICES:
-- For DYNAMIC calculations → ADD_COLUMN with Python formula
-- For FIXED text/number data → UPDATE_COLUMN with static values
-- ⚠️ USE ONLY the EXACT values shown in quotes in [values: ...]
-- Example: if [values: "Male", "Female"] → use "Male" and "Female", NEVER "M", "F", "H"
-- One action = one simple modification
-- Generate EXACT number of values = table row count
-
-📊 EXAMPLE GROUP STATISTICS:
-If Stats table has "gender" column with "Male"/"Female" values, and you want to count from Contacts:
-ADD_COLUMN|Stats|count|len([r for r in Contacts.all if r.gender == $gender])
-ADD_COLUMN|Stats|avg_salary|sum([r.salary for r in Contacts.all if r.gender == $gender]) / len([r for r in Contacts.all if r.gender == $gender]) if len([r for r in Contacts.all if r.gender == $gender]) > 0 else 0
-
-Respond ONLY with this JSON:
-{"analysis": "What I'm doing", "actions": ["ACTION|TABLE|DETAILS"]}`;
+Respond ONLY:
+{"analysis": "short description", "actions": ["ACTION|TABLE|DETAILS"]}`;
 
             // Use proxy if on Vercel or proxy URL is set
             if (config.proxyUrl || window.location.origin.includes('vercel.app')) {
@@ -1844,8 +1770,10 @@ Respond ONLY with this JSON:
             const existingTable = tablesContext.find(t => t.name === tableName);
             
             if (existingTable && existingTable.columns.length > 0) {
-                // Use existing table columns
-                columnNames = existingTable.columns.map(c => c.name);
+                // Use existing table columns - FILTER OUT formula columns!
+                columnNames = existingTable.columns
+                    .filter(c => !c.formula) // Exclude formula columns
+                    .map(c => c.name);
             } else {
                 // Try to get from pending actions (newly created table)
                 // Check for new structured format: CREATE_TABLE|TableName|col1:Type,col2:Type
