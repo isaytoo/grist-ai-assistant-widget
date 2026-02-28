@@ -1759,15 +1759,30 @@ Generate realistic data. DEDUCE missing information intelligently.`;
             return response.json();
         }
 
-        // Add column with formula to Grist table
-        async function addColumn(tableName, colName, formula) {
+        // Add column with formula or type to Grist table
+        async function addColumn(tableName, colName, formulaOrType) {
+            // Check if it's a simple type (Text, Numeric, Int, Bool, Date, etc.) or a formula
+            const simpleTypes = ['Text', 'Numeric', 'Int', 'Bool', 'Date', 'DateTime', 'Choice', 'ChoiceList', 'Ref', 'RefList', 'Attachments', 'Any'];
+            const isSimpleType = simpleTypes.some(t => formulaOrType.toLowerCase() === t.toLowerCase());
+            
+            let fields;
+            if (isSimpleType) {
+                // Simple column type - no formula
+                fields = {
+                    type: formulaOrType.charAt(0).toUpperCase() + formulaOrType.slice(1).toLowerCase()
+                };
+            } else {
+                // Formula column
+                fields = {
+                    type: 'Any',
+                    formula: formulaOrType,
+                    isFormula: true
+                };
+            }
+            
             const columns = [{
                 id: colName,
-                fields: {
-                    type: 'Any',
-                    formula: formula,
-                    isFormula: true
-                }
+                fields: fields
             }];
 
             let response;
