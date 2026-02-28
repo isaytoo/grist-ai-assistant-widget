@@ -974,22 +974,51 @@ UPDATE_COLUMN|NomTable|NomColonne|["val1","val2","val3"]
 - "mets à jour les statuts" → UPDATE_COLUMN|Taches|statut|["Fait","En cours","À faire",...]
 - "complète les données manquantes" → UPDATE_COLUMN|Table|colonne|[valeurs pour CHAQUE ligne]
 
-=== FORMULES GRIST (Python) ===
-- Référence colonne: $NomColonne
-- Calcul ligne: $Prix * $Quantite
-- Somme totale: SUM(Table.all.Colonne)
+=== FORMULES GRIST (Python) - SYNTAXE EXACTE ===
+
+📊 STATISTIQUES DE BASE:
+- Somme: SUM(Table.all.Colonne)
 - Moyenne: AVERAGE(Table.all.Colonne)
-- Comptage: len(Table.all)
+- Comptage total: len(Table.all)
 - Max/Min: max(Table.all.Colonne), min(Table.all.Colonne)
+
+📊 STATISTIQUES AVEC FILTRE (très important!):
+- Compter avec condition: len([r for r in Table.all if r.Colonne == "valeur"])
+- Somme filtrée: sum([r.Montant for r in Table.all if r.Categorie == "X"])
+- Moyenne filtrée: AVERAGE([r.Salaire for r in Table.all if r.Genre == "Homme"])
+- Compter les non-vides: len([r for r in Table.all if r.Colonne])
+- Compter les vides: len([r for r in Table.all if not r.Colonne])
+
+📊 CALCULS AVANCÉS:
+- Pourcentage: round(len([r for r in Table.all if r.Col == "X"]) / len(Table.all) * 100, 2)
+- Écart-type: (sum([(r.Val - AVERAGE(Table.all.Val))**2 for r in Table.all]) / len(Table.all))**0.5
+- Médiane: sorted([r.Val for r in Table.all])[len(Table.all)//2]
+
+📐 CALCULS SUR LIGNE COURANTE:
+- Référence colonne: $NomColonne
+- Calcul: $Prix * $Quantite
 - Condition: "Oui" if $Col > 0 else "Non"
-- Lookup: Table.lookupOne(col=val).autreCol
+- Arrondi: round($Montant, 2)
+
+🔗 LOOKUPS ET RÉFÉRENCES:
+- Chercher une valeur: Table.lookupOne(col=val).autreCol
+- Chercher plusieurs: Table.lookupRecords(col=val)
+- Somme liée: sum([r.Montant for r in AutreTable.lookupRecords(client=$id)])
+
+=== DIFFÉRENCE CRITIQUE ===
+⚠️ UPDATE_COLUMN = valeurs STATIQUES ["val1","val2","val3"] - pour remplir des données texte/nombres fixes
+⚠️ ADD_COLUMN avec formule = calculs DYNAMIQUES qui se mettent à jour automatiquement
+
+EXEMPLE: Pour calculer la moyenne des salaires par genre:
+✅ CORRECT: ADD_COLUMN|Stats|moy_homme|AVERAGE([r.salaire for r in Contacts.all if r.genre == "Homme"])
+❌ FAUX: UPDATE_COLUMN|Stats|moy_homme|[formule] (UPDATE_COLUMN ne supporte PAS les formules!)
 
 === RÈGLES PRAGMATIQUES ===
 1. AGIS, ne te contente pas d'analyser
-2. Si une colonne est vide → UPDATE_COLUMN avec des valeurs réalistes
-3. Génère EXACTEMENT le nombre de valeurs = nombre de lignes de la table
-4. Déduis la table si non précisée
-5. Invente des données réalistes et variées
+2. Pour des CALCULS → ADD_COLUMN avec formule Python
+3. Pour des DONNÉES FIXES → UPDATE_COLUMN avec valeurs statiques
+4. Génère EXACTEMENT le nombre de valeurs = nombre de lignes
+5. Déduis la table si non précisée
 6. Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
 
 Réponds UNIQUEMENT avec ce JSON:
@@ -1029,22 +1058,51 @@ UPDATE_COLUMN|TableName|ColumnName|["val1","val2","val3"]
 - "update the statuses" → UPDATE_COLUMN|Tasks|status|["Done","In Progress","To Do",...]
 - "complete missing data" → UPDATE_COLUMN|Table|column|[values for EACH row]
 
-=== GRIST FORMULAS (Python) ===
-- Column reference: $ColumnName
-- Row calculation: $Price * $Quantity
-- Total sum: SUM(Table.all.Column)
+=== GRIST FORMULAS (Python) - EXACT SYNTAX ===
+
+📊 BASIC STATISTICS:
+- Sum: SUM(Table.all.Column)
 - Average: AVERAGE(Table.all.Column)
-- Count: len(Table.all)
+- Total count: len(Table.all)
 - Max/Min: max(Table.all.Column), min(Table.all.Column)
+
+📊 FILTERED STATISTICS (very important!):
+- Count with condition: len([r for r in Table.all if r.Column == "value"])
+- Filtered sum: sum([r.Amount for r in Table.all if r.Category == "X"])
+- Filtered average: AVERAGE([r.Salary for r in Table.all if r.Gender == "Male"])
+- Count non-empty: len([r for r in Table.all if r.Column])
+- Count empty: len([r for r in Table.all if not r.Column])
+
+📊 ADVANCED CALCULATIONS:
+- Percentage: round(len([r for r in Table.all if r.Col == "X"]) / len(Table.all) * 100, 2)
+- Std deviation: (sum([(r.Val - AVERAGE(Table.all.Val))**2 for r in Table.all]) / len(Table.all))**0.5
+- Median: sorted([r.Val for r in Table.all])[len(Table.all)//2]
+
+📐 CURRENT ROW CALCULATIONS:
+- Column reference: $ColumnName
+- Calculation: $Price * $Quantity
 - Condition: "Yes" if $Col > 0 else "No"
-- Lookup: Table.lookupOne(col=val).otherCol
+- Round: round($Amount, 2)
+
+🔗 LOOKUPS AND REFERENCES:
+- Find one value: Table.lookupOne(col=val).otherCol
+- Find multiple: Table.lookupRecords(col=val)
+- Linked sum: sum([r.Amount for r in OtherTable.lookupRecords(client=$id)])
+
+=== CRITICAL DIFFERENCE ===
+⚠️ UPDATE_COLUMN = STATIC values ["val1","val2","val3"] - for filling fixed text/number data
+⚠️ ADD_COLUMN with formula = DYNAMIC calculations that update automatically
+
+EXAMPLE: To calculate average salary by gender:
+✅ CORRECT: ADD_COLUMN|Stats|avg_male|AVERAGE([r.salary for r in Contacts.all if r.gender == "Male"])
+❌ WRONG: UPDATE_COLUMN|Stats|avg_male|[formula] (UPDATE_COLUMN does NOT support formulas!)
 
 === PRAGMATIC RULES ===
 1. ACT, don't just analyze
-2. If a column is empty → UPDATE_COLUMN with realistic values
-3. Generate EXACTLY the number of values = table row count
-4. Deduce the table if not specified
-5. Invent realistic and varied data
+2. For CALCULATIONS → ADD_COLUMN with Python formula
+3. For FIXED DATA → UPDATE_COLUMN with static values
+4. Generate EXACTLY the number of values = row count
+5. Deduce the table if not specified
 6. Types: Text, Numeric, Int, Bool, Date, DateTime, Choice, Ref, Any
 
 Respond ONLY with this JSON:
